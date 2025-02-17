@@ -46,7 +46,7 @@ try:
 				print("Waiting for fix...")
 				continue
 			print("=" * 40) # Print a separator line.
-			util_func.deviceWrite(gps, device, True)
+			util_func.deviceWrite(gps, device, False)
 except KeyboardInterrupt:
 	pass
 
