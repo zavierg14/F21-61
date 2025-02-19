@@ -1,15 +1,20 @@
-import serial
-import time
-import adafruit_gps
-import datetime
-import sys
-import platform
-import struct
-import dependencies.chs.lib.device_model as deviceModel
-import dependencies.chs.JY901S as JY
-from dependencies.chs.lib.data_processor.roles.jy901s_dataProcessor import JY901SDataProcessor
-from dependencies.chs.lib.protocol_resolver.roles.wit_protocol_resolver import WitProtocolResolver
-import dependencies.util_func as util_func
+# Kaleb Binger 2/2025
+# F21-61
+# Swap Hudson
+# :)
+
+import serial			# Serial to mess w sensors
+import time			# Lets us check what time it is
+import adafruit_gps		# Tells what the GPS is thinking
+import datetime			# Bro idek but the dependencies need it
+import sys			# ^^^^^^
+import platform			# ^^^^^^
+import struct			# ^^^^^^
+import dependencies.chs.lib.device_model as deviceModel	# Actual local file w the deviceModel class
+import dependencies.chs.JY901S as JY			# WitMotion's actual file that I'm stealing functions from :)
+from dependencies.chs.lib.data_processor.roles.jy901s_dataProcessor import JY901SDataProcessor	# WitMotion file to help w data parsing i think
+from dependencies.chs.lib.protocol_resolver.roles.wit_protocol_resolver import WitProtocolResolver	# ^^^^^
+import dependencies.util_func as util_func	# My file :^) this is super useful
 
 # Sampling Frequency Stuff
 sampling_freq = 5 #Hz ---------- frequency we want
@@ -41,21 +46,38 @@ last_print = time.monotonic()	# Start time for sampling
 util_func.startRecord()		# Open file for writing and print headers see ./dependencies/util_func for full startRecord()
 
 # Meat of recording and printing data
-try:				# Try & except to give a way of ending loop someday 
-	while True:			# While loop to continue checking sensors
-		gps.update()			# Command to make the parsing library check if theres anything new from GPS
-		current = time.monotonic()	# Check current time
-		if current - last_print >= .2:	# Compare 
-			last_print = current
-			if not gps.has_fix:
+try:							# Try & except to give a way of ending loop someday 
+	while True:					# While loop to continue checking sensors
+		gps.update()				# Command to make the parsing library check if theres anything new from GPS
+		current = time.monotonic()		# Check current time
+		if current - last_print >= interval:	# Compare elapsed time to sampling interval
+	
+			# If the elapsed time is past the interval it will check the sensors 
+			last_print = current		# Set time since last sample to current time
+			if not gps.has_fix:		# Check for GPS fix
+
 				# Try again if we don't have a fix yet.
 				print("Waiting for fix...")
-				continue
-			print("=" * 40) # Print a separator line.
-			util_func.deviceWrite(gps, device, True)
-except KeyboardInterrupt:
-	pass
+				continue			# Continue loop until fix is obtained
+			print("=" * 40) 			# Print a separator line.
+			util_func.deviceWrite(gps, device, True) # Another function in util_func - takes gps and device objects then prints to terminal and file
+except KeyboardInterrupt:	# Ctrl+C sends keyboard interupt and stops loop
+	pass			# Does literally nothing but stop python from whining
 
-util_func.endRecord()                                         #End record data
-GPSser.close()
-device.closeDevice()
+util_func.endRecord()           # Ends record data - closes file really
+GPSser.close()			# Closes gps serial
+device.closeDevice()		# Closes IMU serial and stops thread - can take a few seconds don't freak out :)
+
+
+
+
+
+
+
+
+
+
+# Happy Driving
+# F21-61 - Kaleb Binger
+# soli deo gloria
+# Ιησους Χριστος
