@@ -27,12 +27,11 @@ gps.send_command(b"PMTK314,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0")	# See
 gps.send_command(b'PMTK220,200')						# See adafruit documentation, telling GPS how fast we want to update date
 
 # Make IMU Serial Object
-device = deviceModel.DeviceModel("IMU",WitProtocolResolver(),JY901SDataProcessor(),"51_0")
-device.serialConfig.portName = IMUserial_port   #Set serial port
-device.serialConfig.baud = IMUbaud_rate                 #Set baud rate
-device.openDevice()                                 #Open serial port
+device = deviceModel.DeviceModel("IMU",WitProtocolResolver(),JY901SDataProcessor(),"51_0")	# WitMotion libraries, make device object
+device.serialConfig.portName = IMUserial_port   						# Set serial port
+device.serialConfig.baud = IMUbaud_rate                 					# Set baud rate
+device.openDevice()                                 						# Open serial port
 
-print("Waiting for GPS fix...")
 last_print = time.monotonic()
 util_func.startRecord()
 try:
