@@ -1,6 +1,6 @@
 # Kaleb Binger 2/2025
 # F21-61 - Swap Hudson
-# This is v2 of the file moving from printing to txt to puting each value in a numpy array.
+# This is v2 of the file moving from printing to txt to puting each value in a dedicated list then CSV file
 # :)
 
 import serial			# Serial to mess w sensors
