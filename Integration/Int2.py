@@ -61,7 +61,7 @@ try:							# Try & except to give a way of ending loop someday
 				# Try again if we don't have a fix yet.
 				print("Waiting for fix...")
 				continue			# Continue loop until fix is obtained
-			print("=" * 40) 			# Print a separator line.
+			print("=" * 120) 			# Print a separator line.
 			util_func.deviceWrite(gps, device, True)	# Printing data
 			imutemp = [time.monotonic(), device.getDeviceData("accX"), device.getDeviceData("accY"), device.getDeviceData("accZ"), device.getDeviceData("angleX"), device.getDeviceData("angleY"), device.getDeviceData("angleZ")]		# Current time step IMU Data
 			gpstemp = [time.monotonic(), gps.latitude, gps.longitude, gps.altitude_m, gps.speed_kmh, gps.satellites]		# Current time step GPS data
@@ -76,8 +76,8 @@ GPSser.close()			# Closes gps serial
 device.closeDevice()		# Closes IMU serial and stops thread - can take a few seconds don't freak out :)
 
 # Write to file
-util_func.csvWrite(GPSdata, "GPS.csv", ["Time", "Lat", "Long", "Alt", "Speed", "Sats"])				# GPS
-util_func.csvWrite(IMUdata, "IMU.csv", ["Time", "AccX", "AccY", "AccZ", "AngleX", "AngleY", "AngleZ"])		# IMU
+util_func.csvWrite(GPSdata, "GPS", ["Time", "Lat", "Long", "Alt", "Speed", "Sats"])				# GPS
+util_func.csvWrite(IMUdata, "IMU", ["Time", "AccX", "AccY", "AccZ", "AngleX", "AngleY", "AngleZ"])		# IMU
 
 
 
