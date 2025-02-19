@@ -81,3 +81,16 @@ def deviceWrite(gps, device, prt):	# Pass in gps and device objects and True/Fal
 
 # Drive safe
 # Soli deo gloria
+ ''' (()__(()
+     /       \ 
+    ( /    \  \
+     \ o o    /
+     (_()_)__/ \             
+    / _,==.____ \
+   (   |--|      )
+   /\_.|__|'-.__/\_
+  / (        /     \ 
+  \  \      (      /
+   )  '._____)    /    
+(((____.--(((____/
+'''
