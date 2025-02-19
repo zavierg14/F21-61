@@ -81,7 +81,7 @@ def deviceWrite(gps, device, prt):	# Pass in gps and device objects and True/Fal
 
 # EZPZ function to write list data to a csv file
 def csvWrite(data, title, headers):
-	with open(title, mode='w', newline='') as file:
+	with open(title+str(datetime.datetime.now().strftime('%Y%m%d%H%M%S'))+".csv", mode='w', newline='') as file:
 		writer = csv.writer(file)
 		writer.writerow(headers)
 		writer.writerows(data)
