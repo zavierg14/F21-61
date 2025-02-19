@@ -11,6 +11,10 @@ from dependencies.chs.lib.data_processor.roles.jy901s_dataProcessor import JY901
 from dependencies.chs.lib.protocol_resolver.roles.wit_protocol_resolver import WitProtocolResolver
 import dependencies.util_func as util_func
 
+# Sampling Frequency Stuff
+sampling_freq = 5 #Hz ---------- frequency we want
+interval = 1/sampling_freq #s -- time in seconds between samples
+
 # Declaring GPS Port and Baud
 GPSserial_port = "/dev/ttyUSB0" # GPS serial port
 GPSbaud_rate = 9600 		# Default GPS baud rate
@@ -32,20 +36,23 @@ device.serialConfig.portName = IMUserial_port   						# Set serial port
 device.serialConfig.baud = IMUbaud_rate                 					# Set baud rate
 device.openDevice()                                 						# Open serial port
 
-last_print = time.monotonic()
-util_func.startRecord()
-try:
-	while True:
-		gps.update()
-		current = time.monotonic()
-		if current - last_print >= .2:
+# Housekeeping before recording data
+last_print = time.monotonic()	# Start time for sampling
+util_func.startRecord()		# Open file for writing and print headers see ./dependencies/util_func for full startRecord()
+
+# Meat of recording and printing data
+try:				# Try & except to give a way of ending loop someday 
+	while True:			# While loop to continue checking sensors
+		gps.update()			# Command to make the parsing library check if theres anything new from GPS
+		current = time.monotonic()	# Check current time
+		if current - last_print >= .2:	# Compare 
 			last_print = current
 			if not gps.has_fix:
 				# Try again if we don't have a fix yet.
 				print("Waiting for fix...")
 				continue
 			print("=" * 40) # Print a separator line.
-			util_func.deviceWrite(gps, device, False)
+			util_func.deviceWrite(gps, device, True)
 except KeyboardInterrupt:
 	pass
 
