@@ -41,9 +41,9 @@ def deviceWrite(gps, device, prt):	# Pass in gps and device objects and True/Fal
 		print("Latitude:"+str(gps.latitude)
 			, "Longitude:"+str(gps.longitude)
 			, "Altitude:" +str(gps.altitude_m)
-			, "\tSpeed:" +str(gps.speed_kmh)
+			, "Speed:" +str(gps.speed_kmh)
 			, "Satellites:" + str(gps.satellites)
-			, "\r\n"
+		#	, "\r\n"
 			, "AccX:" +str(device.getDeviceData("accX"))
 			, "AccY:" +str(device.getDeviceData("accY"))
 			, "AccZ:" +str(device.getDeviceData("accZ"))
@@ -79,6 +79,7 @@ def deviceWrite(gps, device, prt):	# Pass in gps and device objects and True/Fal
 		Tempstr += "\r\n"
 		_writeF.write(Tempstr)	# Writing string to file
 
+# EZPZ function to write list data to a csv file
 def csvWrite(data, title, headers):
 	with open(title, mode='w', newline='') as file:
 		writer = csv.writer(file)

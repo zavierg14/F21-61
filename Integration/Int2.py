@@ -3,7 +3,6 @@
 # This is v2 of the file moving from printing to txt to puting each value in a numpy array.
 # :)
 
-import csv
 import serial			# Serial to mess w sensors
 import time			# Lets us check what time it is
 import adafruit_gps		# Tells what the GPS is thinking
@@ -63,11 +62,11 @@ try:							# Try & except to give a way of ending loop someday
 				print("Waiting for fix...")
 				continue			# Continue loop until fix is obtained
 			print("=" * 40) 			# Print a separator line.
-			util_func.deviceWrite(gps, device, False)
-			imutemp = [time.monotonic(), device.getDeviceData("accX"), device.getDeviceData("accY"), device.getDeviceData("accZ"), device.getDeviceData("angleX"), device.getDeviceData("angleY"), device.getDeviceData("angleZ")]
-			gpstemp = [time.monotonic(), gps.latitude, gps.longitude, gps.altitude_m, gps.speed_kmh, gps.satellites]
-			GPSdata.append(gpstemp)
-			IMUdata.append(imutemp)
+			util_func.deviceWrite(gps, device, True)	# Printing data
+			imutemp = [time.monotonic(), device.getDeviceData("accX"), device.getDeviceData("accY"), device.getDeviceData("accZ"), device.getDeviceData("angleX"), device.getDeviceData("angleY"), device.getDeviceData("angleZ")]		# Current time step IMU Data
+			gpstemp = [time.monotonic(), gps.latitude, gps.longitude, gps.altitude_m, gps.speed_kmh, gps.satellites]		# Current time step GPS data
+			GPSdata.append(gpstemp)			# Append GPS data to big list
+			IMUdata.append(imutemp)			# Append IMU data to big list
 
 except KeyboardInterrupt:	# Ctrl+C sends keyboard interupt and stops loop
 	pass			# Does literally nothing but stop python from whining
@@ -77,8 +76,8 @@ GPSser.close()			# Closes gps serial
 device.closeDevice()		# Closes IMU serial and stops thread - can take a few seconds don't freak out :)
 
 # Write to file
-util_func.csvWrite(GPSdata, "GPS.csv", ["Time", "Lat", "Long", "Alt", "Speed", "Sats"])
-util_func.csvWrite(IMUdata, "IMU.csv", ["Time", "AccX", "AccY", "AccZ", "AngleX", "AngleY", "AngleZ"])
+util_func.csvWrite(GPSdata, "GPS.csv", ["Time", "Lat", "Long", "Alt", "Speed", "Sats"])				# GPS
+util_func.csvWrite(IMUdata, "IMU.csv", ["Time", "AccX", "AccY", "AccZ", "AngleX", "AngleY", "AngleZ"])		# IMU
 
 
 
