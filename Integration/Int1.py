@@ -73,7 +73,20 @@ device.closeDevice()		# Closes IMU serial and stops thread - can take a few seco
 
 
 
-
+## 
+#~Camel~
+#   .--' |
+#  /___^ |     .--.
+#      ) |    /    \
+#     /  |  /`      '.
+#    |   '-'    /     \
+#    \         |      |\
+#     \    /   \      /\|
+#      \  /'----`\   /
+#      |||       \\ |
+#      ((|        ((|
+#      |||        |||
+#     //_(       //_(
 
 
 
