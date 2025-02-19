@@ -51,7 +51,7 @@ try:							# Try & except to give a way of ending loop someday
 		gps.update()				# Command to make the parsing library check if theres anything new from GPS
 		current = time.monotonic()		# Check current time
 		if current - last_print >= interval:	# Compare elapsed time to sampling interval
-	
+
 			# If the elapsed time is past the interval it will check the sensors 
 			last_print = current		# Set time since last sample to current time
 			if not gps.has_fix:		# Check for GPS fix
@@ -73,7 +73,7 @@ device.closeDevice()		# Closes IMU serial and stops thread - can take a few seco
 
 
 
-## 
+##
 #~Camel~
 #   .--' |
 #  /___^ |     .--.
