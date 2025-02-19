@@ -1,35 +1,42 @@
-import time
-import datetime
-import adafruit_gps
+import time		# idek if i use this lol
+import datetime		# Used to name file
+import adafruit_gps	# ~Parses the GPS~
 
-_IsWriteF = False
-_writeF = None
+_IsWriteF = False	# Global variable to tell deviceWrite whether there is an open file
+_writeF = None		# Global variable to tell deviceWrite what file to write to
 
+# A fancy shamncy function to open a text file and give data headers to work with
 def startRecord():
-	global _writeF
-	global _IsWriteF
-	_writeF = open(str(datetime.datetime.now().strftime('%Y%m%d%H%M%S'))+".txt","w")
-	_IsWriteF = True
-	Tempstr = "Time"
-	Tempstr += "\t\t\tLatitude\tLongitude\tAltitude"
-	Tempstr += "\tSpeed (km/hr)"
-	Tempstr += "\taccX (m/s^s)"
-	Tempstr += "\taccY (m/s^s)"
-	Tempstr += "\taccZ (m/s^s)"
-	Tempstr += "\tangleX (m/s^s)"
-	Tempstr += "\tangleY (m/s^s)"
-	Tempstr += "\tangleZ (m/s^s)"
-	Tempstr += "\tSatellites\n"
-	_writeF.write(Tempstr)
+	global _writeF			# imports the global variables?
+	global _IsWriteF		#  ^^^^^^^
+	_writeF = open(str(datetime.datetime.now().strftime('%Y%m%d%H%M%S'))+".txt","w")	# Opens file and names it the current year,month,day,hour,and second - assigns to _writeF
+	_IsWriteF = True		# Tells the other functions we have an open file
+	Tempstr = "Time"		# Begins the string to print into file
+	Tempstr += "\t\t\tLatitude\tLongitude\tAltitude"	# Continues string
+	Tempstr += "\tSpeed (km/hr)"				# Continues string
+	Tempstr += "\taccX (m/s^s)"				# Continues string
+	Tempstr += "\taccY (m/s^s)"				# Continues string
+	Tempstr += "\taccZ (m/s^s)"				# Continues string
+	Tempstr += "\tangleX (m/s^s)"				# Continues string
+	Tempstr += "\tangleY (m/s^s)"				# Continues string
+	Tempstr += "\tangleZ (m/s^s)"				# ^^^^^^
+	Tempstr += "\tSatellites\n"				# We get it at this point
+	_writeF.write(Tempstr)					# Writes that string to the file yippee!
 
+# Function to close file when were all done
 def endRecord():
-	global _writeF
-	global _IsWriteF
-	_IsWriteF = False
-	_writeF.close()
+	global _writeF		# Imports variables
+	global _IsWriteF	# Imports variables
+	_IsWriteF = False	# NOT writing anymore
+	_writeF.close()		# File is closed!
 
-def deviceWrite(gps, device, prt):
-	if prt:
+# This is the function of all time- it actually pulls the data from sensors and prints it to terminal and file
+def deviceWrite(gps, device, prt):	# Pass in gps and device objects and True/False on whether to print to console
+	if prt:				# IF print is true
+
+		# Huge long print statement... basically gps."insert your thing here" calls a gps value
+		# and device.getDeviceData("insert your thing here") calls imu data
+		# theres also some formatting in here
 		print("Latitude:"+str(gps.latitude)
 			, "Longitude:"+str(gps.longitude)
 			, "Altitude:" +str(gps.altitude_m)
@@ -45,7 +52,10 @@ def deviceWrite(gps, device, prt):
 			, "\r\n"
     		)
 
-	if (_IsWriteF):    #Record data
+	# If that lovely file is open then were gonna write to it
+	if (_IsWriteF):
+
+		# Another super long string, same data as before but shoved into a big string
 		Tempstr = str("{}/{}/{} {:02}:{:02}:{:02}".format(
 				gps.timestamp_utc.tm_mon,
 				gps.timestamp_utc.tm_mday,
@@ -66,4 +76,8 @@ def deviceWrite(gps, device, prt):
 		Tempstr += "\t\t"+str(device.getDeviceData("angleZ"))
 		Tempstr += "\t\t" +str(gps.satellites)
 		Tempstr += "\r\n"
-		_writeF.write(Tempstr)
+		_writeF.write(Tempstr)	# Writing string to file
+
+
+# Drive safe
+# Soli deo gloria
