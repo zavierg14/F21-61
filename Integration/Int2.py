@@ -16,7 +16,7 @@ import dependencies.chs.lib.device_model as deviceModel	# Actual local file w th
 import dependencies.chs.JY901S as JY			# WitMotion's actual file that I'm stealing functions from :)
 from dependencies.chs.lib.data_processor.roles.jy901s_dataProcessor import JY901SDataProcessor	# WitMotion file to help w data parsing i think
 from dependencies.chs.lib.protocol_resolver.roles.wit_protocol_resolver import WitProtocolResolver	# ^^^^^
-import dependencies.util_funcTest as util_func	# My file :^) this is super useful
+import dependencies.util_func as util_func	# My file :^) this is super useful
 
 # Sampling Frequency Stuff
 sampling_freq = 5 #Hz ---------- frequency we want
@@ -77,8 +77,8 @@ GPSser.close()			# Closes gps serial
 device.closeDevice()		# Closes IMU serial and stops thread - can take a few seconds don't freak out :)
 
 # Write to file
-print(GPSdata)
-util_func.csvWrite(GPSdata, "GPS.txt", ["Time", "Lat", "Long", "Alt", "Speed", "Sats"])
+util_func.csvWrite(GPSdata, "GPS.csv", ["Time", "Lat", "Long", "Alt", "Speed", "Sats"])
+util_func.csvWrite(IMUdata, "IMU.csv", ["Time", "AccX", "AccY", "AccZ", "AngleX", "AngleY", "AngleZ"])
 
 
 

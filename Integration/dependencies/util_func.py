@@ -1,6 +1,7 @@
 import time		# idek if i use this lol
 import datetime		# Used to name file
 import adafruit_gps	# ~Parses the GPS~
+import csv
 
 _IsWriteF = False	# Global variable to tell deviceWrite whether there is an open file
 _writeF = None		# Global variable to tell deviceWrite what file to write to
@@ -46,9 +47,9 @@ def deviceWrite(gps, device, prt):	# Pass in gps and device objects and True/Fal
 			, "AccX:" +str(device.getDeviceData("accX"))
 			, "AccY:" +str(device.getDeviceData("accY"))
 			, "AccZ:" +str(device.getDeviceData("accZ"))
-			, "Roll:" +str(device.getDeviceData("gyroX"))
-			, "Pitch?:" +str(device.getDeviceData("gyroY"))
-			, "Yaw?:" + str(device.getDeviceData("gyroZ"))
+			, "Roll:" +str(device.getDeviceData("angleX"))
+			, "Pitch?:" +str(device.getDeviceData("angleY"))
+			, "Yaw?:" + str(device.getDeviceData("angleZ"))
 			, "\r\n"
     		)
 
@@ -77,6 +78,14 @@ def deviceWrite(gps, device, prt):	# Pass in gps and device objects and True/Fal
 		Tempstr += "\t\t" +str(gps.satellites)
 		Tempstr += "\r\n"
 		_writeF.write(Tempstr)	# Writing string to file
+
+def csvWrite(data, title, headers):
+	with open(title, mode='w', newline='') as file:
+		writer = csv.writer(file)
+		writer.writerow(headers)
+		writer.writerows(data)
+	#print("CSV written")
+
 
 
 # Drive safe
