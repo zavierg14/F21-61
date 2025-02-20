@@ -18,7 +18,7 @@ from dependencies.chs.lib.protocol_resolver.roles.wit_protocol_resolver import W
 import dependencies.util_func as util_func	# My file :^) this is super useful
 
 # Sampling Frequency Stuff
-sampling_freq = 5 #Hz ---------- frequency we want
+sampling_freq = 10 #Hz ---------- frequency we want
 interval = 1/sampling_freq #s -- time in seconds between samples
 
 # Declaring GPS Port and Baud
@@ -36,7 +36,7 @@ GPSser = serial.Serial(GPSserial_port, GPSbaud_rate, timeout=.3) 		# Using our f
 GPSser.baudrate = GPSbaud_rate					 		# Change baudrate to wakeup GPS
 gps = adafruit_gps.GPS(GPSser, debug = False)			 		# Create gps object with adafruit parser
 gps.send_command(b"PMTK314,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0")	# See adafruit documentation, telling GPS what data we want
-gps.send_command(b'PMTK220,200')						# See adafruit documentation, telling GPS how fast we want to update date
+gps.send_command(b'PMTK220,100')						# See adafruit documentation, telling GPS how fast we want to update date
 
 # Make IMU Serial Object
 device = deviceModel.DeviceModel("IMU",WitProtocolResolver(),JY901SDataProcessor(),"51_0")	# WitMotion libraries, make device object
@@ -80,7 +80,7 @@ util_func.csvWrite(GPSdata, "GPS", ["Time", "Lat", "Long", "Alt", "Speed", "Sats
 util_func.csvWrite(IMUdata, "IMU", ["Time", "AccX", "AccY", "AccZ", "AngleX", "AngleY", "AngleZ"])		# IMU
 
 
-
+# insert
 ##
 #~Camel~
 #   .--' |
