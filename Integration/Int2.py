@@ -23,7 +23,7 @@ interval = 1/sampling_freq #s -- time in seconds between samples
 
 # Declaring GPS Port and Baud
 GPSserial_port = "/dev/ttyUSB0" # GPS serial port
-GPSbaud_rate = 9600 		# Default GPS baud rate
+GPSbaud_rate = 115200 		# Default GPS baud rate
 GPSdata = [[time.monotonic(),0,0,0,0,0]]	# Time/lat/long/altitude/speed/sat count
 
 # Declaring IMU Port and baud
@@ -34,12 +34,9 @@ IMUdata = [[time.monotonic(),0,0,0,0,0,0]] # Time/accX/accY/accZ/angleX/AngleY/A
 # Make GPS Serial object
 GPSser = serial.Serial(GPSserial_port, GPSbaud_rate, timeout=.1) 		# Using our fancy serial import, create an object for the GPS with the port name, baud rate, and timeout
 GPSser.baudrate = GPSbaud_rate					 		# Change baudrate to wakeup GPS
-gps = adafruit_gps.GPS(GPSser, debug = False)			 		# Create gps object with adafruit parser
+gps = adafruit_gps.GPS(GPSser, debug = False)			 		# Create gps object with adafruit parsery
 gps.send_command(b"PMTK314,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0")	# See adafruit documentation, telling GPS what data we want
 gps.send_command(b'PMTK220,100')						# See adafruit documentation, telling GPS how fast we want to update date
-gps.send_command(b'PMTK251,115200')
-GPSser.baudrate = 115200
-gps.send_command(b'PMTK220,100')
 
 
 # Make IMU Serial Object
@@ -82,27 +79,3 @@ device.closeDevice()		# Closes IMU serial and stops thread - can take a few seco
 # Write to file
 util_func.csvWrite(GPSdata, "GPS", ["Time", "Lat", "Long", "Alt", "Speed", "Sats"])				# GPS
 util_func.csvWrite(IMUdata, "IMU", ["Time", "AccX", "AccY", "AccZ", "AngleX", "AngleY", "AngleZ"])		# IMU
-
-
-# insert
-##
-#~Camel~
-#   .--' |
-#  /___^ |     .--.
-#      ) |    /    \
-#     /  |  /`      '.
-#    |   '-'    /     \
-#    \         |      |\
-#     \    /   \      /\|
-#      \  /'----`\   /
-#      |||       \\ |
-#      ((|        ((|
-#      |||        |||
-#     //_(       //_(
-
-
-
-# Happy Driving
-# F21-61 - Kaleb Binger
-# soli deo gloria
-# Ιησους Χριστος
