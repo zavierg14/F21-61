@@ -32,11 +32,15 @@ IMUbaud_rate = 9600		# Default IMU baud rate
 IMUdata = [[time.monotonic(),0,0,0,0,0,0]] # Time/accX/accY/accZ/angleX/AngleY/AngleZ
 
 # Make GPS Serial object
-GPSser = serial.Serial(GPSserial_port, GPSbaud_rate, timeout=.3) 		# Using our fancy serial import, create an object for the GPS with the port name, baud rate, and timeout
+GPSser = serial.Serial(GPSserial_port, GPSbaud_rate, timeout=.1) 		# Using our fancy serial import, create an object for the GPS with the port name, baud rate, and timeout
 GPSser.baudrate = GPSbaud_rate					 		# Change baudrate to wakeup GPS
 gps = adafruit_gps.GPS(GPSser, debug = False)			 		# Create gps object with adafruit parser
-gps.send_command(b"PMTK314,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0")	# See adafruit documentation, telling GPS what data we want
+gps.send_command(b"PMTK314,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0")	# See adafruit documentation, telling GPS what data we want
 gps.send_command(b'PMTK220,100')						# See adafruit documentation, telling GPS how fast we want to update date
+gps.send_command(b'PMTK251,115200')
+GPSser.baudrate = 115200
+gps.send_command(b'PMTK220,100')
+
 
 # Make IMU Serial Object
 device = deviceModel.DeviceModel("IMU",WitProtocolResolver(),JY901SDataProcessor(),"51_0")	# WitMotion libraries, make device object
