@@ -1,3 +1,7 @@
+#WIRING
+#ADC Needs 3.3V, Ground, SCL, and SDA
+#Potentiometer needs 3.3V, Ground, and signal connected to ADC channel A0 (consult data sheet for pinout)
+
 #To use this make sure i2c is enabled and has the right bitrate using:
 sudo nano /boot/firmware/config.txt
 
