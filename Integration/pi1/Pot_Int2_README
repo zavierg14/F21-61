@@ -1,0 +1,14 @@
+#To use this make sure i2c is enabled and has the right bitrate using:
+sudo nano /boot/firmware/config.txt
+
+#In the text file, update this line:
+dtparam=i2c_arm=on
+#To say this instead:
+dtparam=i2c_arm=on,i2c_arm_baudrate=400000
+
+#If there is not a vitrual environment, follow the "Setup Virtual Environment" directions on the following website:
+https://learn.adafruit.com/circuitpython-on-raspberrypi-linux/installing-circuitpython-on-raspberry-pi
+#Once the vitual environment is installed and activated, follow the "Automated Install" directions on the same website
+
+#Use the program in the terminal using the virtual environment
+#If you encounter errors with the configuration, take a screenshot of the errors and give your code to chat gpt to downlopad the correct config files
