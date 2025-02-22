@@ -47,6 +47,7 @@ device.openDevice()                                 						# Open serial port
 
 # Housekeeping before recording data
 last_print = time.monotonic()	# Start time for sampling
+start = last_print
 
 # Meat of recording and printing data
 try:							# Try & except to give a way of ending loop someday 
@@ -68,6 +69,9 @@ try:							# Try & except to give a way of ending loop someday
 			gpstemp = [time.monotonic(), gps.latitude, gps.longitude, gps.altitude_m, gps.speed_kmh, gps.satellites]		# Current time step GPS data
 			GPSdata.append(gpstemp)			# Append GPS data to big list
 			IMUdata.append(imutemp)			# Append IMU data to big list
+
+		if time.monotonic() - start > 3600:
+			break
 
 except KeyboardInterrupt:	# Ctrl+C sends keyboard interupt and stops loop
 	pass			# Does literally nothing but stop python from whining
