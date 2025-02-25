@@ -12,6 +12,12 @@ AS5600_ADDR = 0x36
 RAW_ANGLE_REG = 0x0C
 AS5600data = [[time.monotonic(), 0.0]]
 
+def csvWrite(data, title, headers):
+	with open(title+str(datetime.datetime.now().strftime('%Y%m%d%H%M%S'))+".csv", mode='w', newline='') as file:
+		writer = csv.writer(file)
+		writer.writerow(headers)
+		writer.writerows(data)
+		
 # Function to Read AS5600 Angle
 def read_angle():
 	bus = smbus2.SMBus(1)
