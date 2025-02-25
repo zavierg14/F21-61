@@ -1,7 +1,7 @@
 import smbus2
 import time
 import sys
-from ..pi2.dependencies import util_func
+import os
 
 # Sampling Frequency Stuff
 sampling_freq = 10 # Hz
@@ -38,4 +38,4 @@ except KeyboardInterrupt:
 	pass
 
 # Write Data to CSV
-util_func.csvWrite(AS5600data, "AS5600", ["Time", "Angle (deg)"])
+csvWrite(AS5600data, "AS5600", ["Time", "Angle (deg)"])
