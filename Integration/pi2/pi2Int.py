@@ -6,9 +6,9 @@
 import serial			# Serial to mess w sensors
 import time			# Lets us check what time it is
 import adafruit_gps		# Tells what the GPS is thinking
-import numpy as np		# We need to use some arrays
+#import numpy as np		# We need to use some arrays
 import datetime			# Bro idek but the dependencies need it
-import sys			# ^^^^^^
+#import sys			# ^^^^^^
 import platform			# ^^^^^^
 import struct			# ^^^^^^
 import dependencies.chs.lib.device_model as deviceModel	# Actual local file w the deviceModel class
@@ -16,6 +16,10 @@ import dependencies.chs.JY901S as JY			# WitMotion's actual file that I'm steali
 from dependencies.chs.lib.data_processor.roles.jy901s_dataProcessor import JY901SDataProcessor	# WitMotion file to help w data parsing i think
 from dependencies.chs.lib.protocol_resolver.roles.wit_protocol_resolver import WitProtocolResolver	# ^^^^^
 import dependencies.util_func as util_func	# My file :^) this is super useful
+import board
+import busio
+import adafruit_ads1x15.ads1015 as ADS
+from adafruit_ads1x15.analog_in import AnalogIn
 
 # Sampling Frequency Stuff
 sampling_freq = 10 #Hz ---------- frequency we want
