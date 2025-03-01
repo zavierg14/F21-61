@@ -85,9 +85,12 @@ def csvWrite(data, title, headers):
 		writer = csv.writer(file)
 		writer.writerow(headers)
 		writer.writerows(data)
-	#print("CSV written")
 
-
+# Sets ADS1015 to continuous conversion mode by modifying config register
+def set_continuous_mode(adc, CONFIG_REGISTER):
+	config_value = adc._read_register(CONFIG_REGISTER,2)	# Read current 16-bit configuration register value, returns an int
+	config_value &= ~(1 << 8)	# Clear Bit 8 (MODE Bit) to enable continuous conversion mode
+	adc._write_register(CONFIG_REGISTER, config_value)	# Write back modified configuration as a single 16-bit integer
 
 # Drive safe
 # Soli deo gloria
