@@ -9,9 +9,9 @@ import serial
 import time
 
 # Adjust serial_port to your device (e.g., /dev/ttyAMA0, /dev/serial0, etc.)
-serial_port = 'COM3'
+serial_port = '/dev/ttyUSB0'
 baud_rateo = 115200
-baud_raten = 9600  # Adafruit Ultimate GPS default baud rate
+baud_raten = 115200  # Adafruit Ultimate GPS default baud rate
 
 
 try:
@@ -30,7 +30,6 @@ print(f"Reading NMEA sentences from {serial_port}...")
 
 #line = ser.readline().decode("ascii", errors="replace").strip()
 #rint(line)
-print("didn't work")
 ser.baudrate = baud_raten
 
 while True:

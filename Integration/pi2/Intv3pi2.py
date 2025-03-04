@@ -70,7 +70,7 @@ try:							# Try & except to give a way of ending loop someday
 			# If the elapsed time is past the interval it will check the sensors 
 			slast_print = current		# Set time since last sample to current time
 			if not gps.has_fix:		# Check for GPS fix
-				imutemp = [time.perf_counter(), deevice.getDeviceData("accx"), device.getDeviceData("accY"), device.getDeviceData("accZ"), device.getDeviceData("angleX"), device.getDeviceData("angleY"), device.getDeviceData("angleZ")]
+				imutemp = [time.perf_counter(), device.getDeviceData("accx"), device.getDeviceData("accY"), device.getDeviceData("accZ"), device.getDeviceData("angleX"), device.getDeviceData("angleY"), device.getDeviceData("angleZ")]
 				# Try again if we don't have a fix yet.
 				print("Waiting for fix...")
 				continue			# Continue loop until fix is obtained
@@ -80,7 +80,6 @@ try:							# Try & except to give a way of ending loop someday
 			gpstemp = [time.perf_counter(), gps.latitude, gps.longitude, gps.altitude_m, gps.speed_kmh, gps.satellites]		# Current time step GPS data
 			GPSdata.append(gpstemp)			# Append GPS data to big list
 			IMUdata.append(imutemp)			# Append IMU data to big list
-			print("GPS")
 		if current - flast_print >= interval2:
 			raw_value = pot_channel1.value	# Read ADC Values
 			voltage = round(pot_channel1.voltage, 2)	# Read ADC Voltage
@@ -100,6 +99,8 @@ GPSser.close()			# Closes gps serial
 device.closeDevice()		# Closes IMU serial and stops thread - can take a few seconds don't freak out :)
 
 # Write to file
-util_func.csvWrite(GPSdata, "GPS", ["Time", "Lat", "Long", "Alt", "Speed", "Sats"])				# GPS
-util_func.csvWrite(IMUdata, "IMU", ["Time", "AccX", "AccY", "AccZ", "AngleX", "AngleY", "AngleZ"])		# IMU
-util_func.csvWrite(Pot1data, "Pot1", ["Time", "Raw Value", "Voltage"])
+util_func.csvWriteUSB(GPSdata, "GPS", ["Time", "Lat", "Long", "Alt", "Speed", "Sats"])				# GPS
+util_func.csvWriteUSB(IMUdata, "IMU", ["Time", "AccX", "AccY", "AccZ", "AngleX", "AngleY", "AngleZ"])		# IMU
+util_func.csvWriteUSB(Pot1data, "Pot1", ["Time", "Raw Value", "Voltage"])
+
+

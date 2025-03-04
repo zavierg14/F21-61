@@ -3,3 +3,4 @@
 
 rm *.txt 2> /dev/null
 rm *.csv 2> /dev/null
+rm -rf 2025* 2> /dev/null
