@@ -2,6 +2,7 @@ import time		# idek if i use this lol
 import datetime		# Used to name file
 import adafruit_gps	# ~Parses the GPS~
 import csv
+import os
 
 _IsWriteF = False	# Global variable to tell deviceWrite whether there is an open file
 _writeF = None		# Global variable to tell deviceWrite what file to write to
@@ -91,6 +92,33 @@ def set_continuous_mode(adc, CONFIG_REGISTER):
 	config_value = adc._read_register(CONFIG_REGISTER,2)	# Read current 16-bit configuration register value, returns an int
 	config_value &= ~(1 << 8)	# Clear Bit 8 (MODE Bit) to enable continuous conversion mode
 	adc._write_register(CONFIG_REGISTER, config_value)	# Write back modified configuration as a single 16-bit integer
+
+def check_usb_drive():
+	mount_points = ["/media/admin/", "/mnt/"]
+
+	for mount_point in mount_points:
+		if os.path.exists(mount_point):
+			subdirs = os.listdir(mount_point)
+			if subdirs:
+				usb_path = os.path.join(mount_point, subdirs[0])
+				print(f"USB drive detected at: {usb_path}")
+				return usb_path
+
+	print("No USB drive found.")
+	return None
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # Drive safe
 # Soli deo gloria
