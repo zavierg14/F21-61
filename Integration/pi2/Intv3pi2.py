@@ -86,8 +86,8 @@ try:							# Try & except to give a way of ending loop someday
 			if raw_value < 0:
 				raw_value = 0
 				voltage = 0.00
-#			print("=" * 120)
-			#print(f"Time: {time.perf_counter():.6f}s | Raw Value: {raw_value}, Voltage: {voltage:.2f} V")
+			print("=" * 80)
+			print(f"Time: {time.perf_counter():.6f}s | Raw Value: {raw_value}, Voltage: {voltage:.2f} V")
 			Pot1data.append([time.perf_counter(), raw_value, voltage])
 			flast_print=current
 
