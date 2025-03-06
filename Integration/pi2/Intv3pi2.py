@@ -52,7 +52,6 @@ adc = ADS.ADS1015(i2c)			# ADS1015 object
 CONFIG_REGISTER = 0x01 			# Honestly idk ask zavier
 util_func.set_continuous_mode(adc, CONFIG_REGISTER)	# Enable continuous mode
 adc.data_rate = fast_sampling_freq	# Set ADS1015 to an appropriate sample rate (predetermined by hardware-see datasheet)
-adc.gain = 1
 pot_channel1 = AnalogIn(adc, ADS.P0)	# Initialize channel in Single-Ended Mode
 Pot1data = [[time.perf_counter(), 0, 0]]	# Time/rawvalue/voltage
 
@@ -77,7 +76,7 @@ try:							# Try & except to give a way of ending loop someday
 			if not gps.has_fix:		# Check for GPS fix
 				imutemp = [time.perf_counter(), device.getDeviceData("accx"), device.getDeviceData("accY"), device.getDeviceData("accZ"), device.getDeviceData("angleX"), device.getDeviceData("angleY"), device.getDeviceData("angleZ")]
 				# Try again if we don't have a fix yet.
-				print("Waiting for fix...")
+#				print("Waiting for fix...")
 				continue			# Continue loop until fix is obtained
 #			print("=" * 120) 			# Print a separator line.
 			util_func.deviceWrite(gps, device, False)	# Printing data
