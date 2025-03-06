@@ -46,14 +46,19 @@ device.serialConfig.portName = IMUserial_port   						# Set serial port
 device.serialConfig.baud = IMUbaud_rate                 					# Set baud rate
 device.openDevice()                                 						# Open serial port
 
-# Linear Potentiometer configuration
+# Linear Potentiometer 1 configuration
 i2c = busio.I2C(board.SCL, board.SDA)	# Declaring I2C object
 adc = ADS.ADS1015(i2c)			# ADS1015 object
 CONFIG_REGISTER = 0x01 			# Honestly idk ask zavier
 util_func.set_continuous_mode(adc, CONFIG_REGISTER)	# Enable continuous mode
 adc.data_rate = fast_sampling_freq	# Set ADS1015 to an appropriate sample rate (predetermined by hardware-see datasheet)
+adc.gain = 1
 pot_channel1 = AnalogIn(adc, ADS.P0)	# Initialize channel in Single-Ended Mode
 Pot1data = [[time.perf_counter(), 0, 0]]	# Time/rawvalue/voltage
+
+# Linear Potentiometer 2 configuration
+pot_channel2 = AnalogIn(adc, ADS.P1)
+Pot2data = [[time.perf_counter(), 0, 0]]
 
 # Housekeeping before recording data
 slast_print = time.perf_counter()	# Start time for sampling
@@ -81,14 +86,20 @@ try:							# Try & except to give a way of ending loop someday
 			GPSdata.append(gpstemp)			# Append GPS data to big list
 			IMUdata.append(imutemp)			# Append IMU data to big list
 		if current - flast_print >= interval2:
-			raw_value = pot_channel1.value	# Read ADC Values
-			voltage = round(pot_channel1.voltage, 2)	# Read ADC Voltage
-			if raw_value < 0:
-				raw_value = 0
-				voltage = 0.00
+			raw_value1 = pot_channel1.value	# Read ADC Values
+			raw_value2 = pot_channel2.value
+			voltage1 = round(pot_channel1.voltage, 3)	# Read ADC Voltage
+			voltage2 = round(pot_channel2.voltage, 3)
+			if raw_value1 < 0:
+				raw_value1 = 0
+				voltage1 = 0.00
+			if raw_value2 < 0:
+				raw_value2 = 0
+				volatage2 = 0.00
 			print("=" * 80)
-			print(f"Time: {time.perf_counter():.6f}s | Raw Value: {raw_value}, Voltage: {voltage:.2f} V")
-			Pot1data.append([time.perf_counter(), raw_value, voltage])
+			print(f"Time: {time.perf_counter():.6f}s | Voltage 1: {voltage1:.2f} |, Voltage 2: {voltage2:.2f} V")
+			Pot1data.append([time.perf_counter(), raw_value1, voltage1])
+			Pot2data.append([time.perf_counter(), raw_value1, voltage2])
 			flast_print=current
 
 except KeyboardInterrupt:	# Ctrl+C sends keyboard interupt and stops loop
@@ -102,5 +113,5 @@ device.closeDevice()		# Closes IMU serial and stops thread - can take a few seco
 util_func.csvWriteUSB(GPSdata, "GPS", ["Time", "Lat", "Long", "Alt", "Speed", "Sats"])				# GPS
 util_func.csvWriteUSB(IMUdata, "IMU", ["Time", "AccX", "AccY", "AccZ", "AngleX", "AngleY", "AngleZ"])		# IMU
 util_func.csvWriteUSB(Pot1data, "Pot1", ["Time", "Raw Value", "Voltage"])
-
+util_func.csvWriteUSB(Pot2data, "Pot2", ["Time", "Raw Value", "Voltage"])
 
