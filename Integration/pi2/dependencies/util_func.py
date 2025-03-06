@@ -111,7 +111,9 @@ def get_usb_path():
 	base_path = "/media/admin"
 	return next((os.path.join(base_path, d) for d in os.listdir(base_path) if os.path.ismount(os.path.join(base_path, d))), None)
 
-
+def read_ads1015_raw(i2c, CONVERSION_REGISTER):
+	raw_value = adc._read_register(CONVERSION_REGISTER, 2)	# Read 2 bytes (16-bit value)
+	return raw_value >> 4	# ADS1015 outputs 12-bit data, so shift right 4 bits
 
 
 
