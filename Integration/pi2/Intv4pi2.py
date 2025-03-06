@@ -10,7 +10,7 @@ def read_adc(queue):
     i2c = busio.I2C(board.SCL, board.SDA)
     adc = ADS.ADS1015(i2c)
     adc.data_rate = 2400
-    pot_channel = ADC.P0  # example channel
+    pot_channel = ADS.P0  # Corrected to ADS.P0
     while True:
         raw_value = pot_channel.value
         voltage = round(pot_channel.voltage, 3)
