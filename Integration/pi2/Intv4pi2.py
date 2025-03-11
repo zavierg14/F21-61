@@ -51,6 +51,8 @@ i2c = busio.I2C(board.SCL, board.SDA)	# Declaring I2C object
 adc = ADS.ADS1015(i2c)			# ADS1015 object
 CONFIG_REGISTER = 0x01 			# Honestly idk ask zavier
 util_func.set_continuous_mode(adc, CONFIG_REGISTER)	# Enable continuous mode
+config_value = adc._read_register(CONFIG_REGISTER, 2)
+#print(f"Config Register after setting continuous mode: {bin(config_value)}")
 adc.data_rate = fast_sampling_freq	# Set ADS1015 to an appropriate sample rate (predetermined by hardware-see datasheet)
 pot_channel1 = AnalogIn(adc, ADS.P0)	# Initialize channel in Single-Ended Mode
 Pot1data = [[time.perf_counter(), 0]]	# Time/rawvalue/voltage
@@ -90,7 +92,7 @@ try:							# Try & except to give a way of ending loop someday
 				raw_value1 = 0
 			if raw_value2 < 0:
 				raw_value2 = 0
-			print(f"Time: {time.perf_counter()-flast_print:.4f}s | Raw 1: {raw_value1:.2f} |, Raw 2: {raw_value2:.2f}")
+#			print(f"Time: {time.perf_counter()-flast_print:.4f}s | Raw 1: {raw_value1:.2f} |, Raw 2: {raw_value2:.2f}")
 			Pot1data.append([time.perf_counter(), raw_value1])
 			Pot2data.append([time.perf_counter(), raw_value1])
 			flast_print=current
