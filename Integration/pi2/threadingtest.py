@@ -71,26 +71,24 @@ def imu_gps_thread():
 	'''
 	global slast_print
 	global GPSIMURUN
-
-	if GPSIMURUN:
-		while True:
-			current = time.perf_counter()
-			gpstemp = [time.perf_counter(), None, None, None, None, None]
-			imutemp = [time.perf_counter(), 0,0,0,0,0,0]
-			gps.update()
-			with data_lock:
-				if current - slast_print >= interval:
-					slast_print = current
-					if gps.has_fix:
-						gpstemp = [time.perf_counter(), gps.latitude,
-							gps.longitude, gps.altitude_m, gps.speed_kmh,
-							gps.satellites]
-					imutemp = [time.perf_counter(), device.getDeviceData("accX"),
-						device.getDeviceData("accY"), device.getDeviceData("accZ"),
-						device.getDeviceData("angleX"), device.getDeviceData("angleY"),
-						device.getDeviceData("angleZ")]
-					GPSdata.append(gpstemp)
-					IMUdata.append(imutemp)
+	while GPSIMURUN:
+		current = time.perf_counter()
+		gpstemp = [time.perf_counter(), None, None, None, None, None]
+		imutemp = [time.perf_counter(), 0,0,0,0,0,0]
+		gps.update()
+		with data_lock:
+			if current - slast_print >= interval:
+				slast_print = current
+				if gps.has_fix:
+					gpstemp = [time.perf_counter(), gps.latitude,
+						gps.longitude, gps.altitude_m, gps.speed_kmh,
+						gps.satellites]
+				imutemp = [time.perf_counter(), device.getDeviceData("accX"),
+					device.getDeviceData("accY"), device.getDeviceData("accZ"),
+					device.getDeviceData("angleX"), device.getDeviceData("angleY"),
+					device.getDeviceData("angleZ")]
+				GPSdata.append(gpstemp)
+				IMUdata.append(imutemp)
 
 # Start GPS & IMU processing in a seperate thread
 gps_imu_thread = threading.Thread(target=imu_gps_thread, daemon=True)
@@ -107,7 +105,7 @@ try:							# Try & except to give a way of ending loop someday
 				raw_value1 = 0
 			if raw_value2 < 0:
 				raw_value2 = 0
-			print(f"Time: {time.perf_counter()-flast_print:.2f}s | Voltage 1: {raw_value1:.2f} |, Voltage 2: {raw_value2:.2f} V")
+			print(f"Time: {time.perf_counter()-flast_print:.5f}s | Voltage 1: {raw_value1:.2f} |, Voltage 2: {raw_value2:.2f} V")
 			Pot1data.append([time.perf_counter(), raw_value1])
 			Pot2data.append([time.perf_counter(), raw_value2])
 			flast_print=current
