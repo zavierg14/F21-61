@@ -71,24 +71,27 @@ def imu_gps_thread():
 	'''
 	global slast_print
 	global GPSIMURUN
-	while GPSIMURUN:
-		current = time.perf_counter()
-		gpstemp = [time.perf_counter(), None, None, None, None, None]
-		imutemp = [time.perf_counter(), 0,0,0,0,0,0]
-		gps.update()
-		with data_lock:
-			if current - slast_print >= interval:
-				slast_print = current
-				if gps.has_fix:
-					gpstemp = [time.perf_counter(), gps.latitude,
-						gps.longitude, gps.altitude_m, gps.speed_kmh,
-						gps.satellites]
-				imutemp = [time.perf_counter(), device.getDeviceData("accX"),
-					device.getDeviceData("accY"), device.getDeviceData("accZ"),
-					device.getDeviceData("angleX"), device.getDeviceData("angleY"),
-					device.getDeviceData("angleZ")]
-				GPSdata.append(gpstemp)
-				IMUdata.append(imutemp)
+	if GPSIMURUN:
+		while GPSIMURUN:
+			current = time.perf_counter()
+			gpstemp = [time.perf_counter(), None, None, None, None, None]
+			imutemp = [time.perf_counter(), 0,0,0,0,0,0]
+			gps.update()
+			with data_lock:
+				if current - slast_print >= interval:
+					slast_print = current
+					if gps.has_fix:
+						gpstemp = [time.perf_counter(), gps.latitude,
+							gps.longitude, gps.altitude_m, gps.speed_kmh,
+							gps.satellites]
+					imutemp = [time.perf_counter(), device.getDeviceData("accX"),
+						device.getDeviceData("accY"), device.getDeviceData("accZ"),
+						device.getDeviceData("angleX"), device.getDeviceData("angleY"),
+						device.getDeviceData("angleZ")]
+					GPSdata.append(gpstemp)
+					IMUdata.append(imutemp)
+			if GPSIMURUN == False:
+				break
 
 # Start GPS & IMU processing in a seperate thread
 gps_imu_thread = threading.Thread(target=imu_gps_thread, daemon=True)

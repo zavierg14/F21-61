@@ -1,6 +1,6 @@
 # Kaleb Binger 2/2025
 # F21-61 - Swap Hudson
-# This is v2 of the file moving from printing to txt to puting each value in a dedicated list then CSV file
+# v4 of code introducing both potentiometers and 550Hz sampling
 # :)
 
 import serial			# Serial to mess w sensors
@@ -78,7 +78,6 @@ try:							# Try & except to give a way of ending loop someday
 				# Try again if we don't have a fix yet.
 #				print("Waiting for fix...")
 				continue			# Continue loop until fix is obtained
-#			print("=" * 120) 			# Print a separator line.
 			util_func.deviceWrite(gps, device, False)	# Printing data
 			imutemp = [time.perf_counter(), device.getDeviceData("accX"), device.getDeviceData("accY"), device.getDeviceData("accZ"), device.getDeviceData("angleX"), device.getDeviceData("angleY"), device.getDeviceData("angleZ")]		# Current time step IMU Data
 			gpstemp = [time.perf_counter(), gps.latitude, gps.longitude, gps.altitude_m, gps.speed_kmh, gps.satellites]		# Current time step GPS data
@@ -87,16 +86,11 @@ try:							# Try & except to give a way of ending loop someday
 		if current - flast_print >= interval2:
 			raw_value1 = pot_channel1.value	# Read ADC Values
 			raw_value2 = pot_channel2.value
-			#voltage1 = round(pot_channel1.voltage, 3)	# Read ADC Voltage
-			#voltage2 = round(pot_channel2.voltage, 3)
 			if raw_value1 < 0:
 				raw_value1 = 0
-			#	voltage1 = 0.00
 			if raw_value2 < 0:
 				raw_value2 = 0
-			#	volatage2 = 0.00
-#			print("=" * 80)
-#			print(f"Time: {time.perf_counter()-flast_print}s | Voltage 1: {voltage1:.2f} |, Voltage 2: {voltage2:.2f} V")
+			print(f"Time: {time.perf_counter()-flast_print:.4f}s | Raw 1: {raw_value1:.2f} |, Raw 2: {raw_value2:.2f}")
 			Pot1data.append([time.perf_counter(), raw_value1])
 			Pot2data.append([time.perf_counter(), raw_value1])
 			flast_print=current
@@ -111,6 +105,6 @@ device.closeDevice()		# Closes IMU serial and stops thread - can take a few seco
 # Write to file
 util_func.csvWriteUSB(GPSdata, "GPS", ["Time", "Lat", "Long", "Alt", "Speed", "Sats"])				# GPS
 util_func.csvWriteUSB(IMUdata, "IMU", ["Time", "AccX", "AccY", "AccZ", "AngleX", "AngleY", "AngleZ"])		# IMU
-util_func.csvWriteUSB(Pot1data, "Pot1", ["Time", "Raw Value", "Voltage"])
-util_func.csvWriteUSB(Pot2data, "Pot2", ["Time", "Raw Value", "Voltage"])
+util_func.csvWriteUSB(Pot1data, "Pot1", ["Time", "Raw Value"])
+util_func.csvWriteUSB(Pot2data, "Pot2", ["Time", "Raw Value"])
 
