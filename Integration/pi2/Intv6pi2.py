@@ -25,6 +25,7 @@ interval = 1/slow_sampling_freq #s GPS & IMU interval
 fast_sampling_freq = 3300 #Hz (ADS1015 sampling rate)
 interval2 = 1/fast_sampling_freq #s ADS interval
 pulse_count1 = 0
+pulse_count2 = 0
 
 # Data Storage
 GPSdata = []
@@ -32,17 +33,23 @@ IMUdata = []
 Pot1data = []
 Pot2data = []
 Hall1data = []
+Hall2data = []
 
 def pulse_callback(chip, gpio, level, timestamp):
 	'''
 	callback function that gets called on the rising edge of the hall sensor output.
 	increments pulse counter
 	'''
-	global pulse_count1, Hall1data
+	global pulse_count1,pulse_count2, Hall1data, Hall2data
 	if level == 1:
-		pulse_count1 +=1
-		Hall1data.append([time.perf_counter(), pulse_count1])
-		print(Hall1data[-1])
+		if gpio == PIN1:
+			pulse_count1 +=1
+			Hall1data.append([time.perf_counter(), pulse_count1])
+			print("Hall1:", Hall1data[-1])
+		elif gpio == PIN2:
+			pulse_count2 += 1
+			Hall2data.append([time.perf_counter(), pulse_count2])
+			print("Hall2:", Hall2data[-1])
 
 def imu_gps_process(gps_queue, imu_queue):
 	'''Runs GPS and IMU processing in a seperate process to avoid slowing down
@@ -89,11 +96,16 @@ def imu_gps_process(gps_queue, imu_queue):
 			imu_queue.put(imu_data)
 # Configure Hall Effect
 CHIP = 0
-PIN = 17
+PIN1 = 17
+PIN2 = 27
 h = lgpio.gpiochip_open(CHIP)
-lgpio.gpio_claim_input(h, PIN)
-lgpio.gpio_claim_alert(h, PIN, lgpio.RISING_EDGE)
-lgpio.callback(h, PIN, lgpio.RISING_EDGE, pulse_callback)
+lgpio.gpio_claim_input(h, PIN1)
+lgpio.gpio_claim_alert(h, PIN1, lgpio.RISING_EDGE)
+lgpio.callback(h, PIN1, lgpio.RISING_EDGE, pulse_callback)
+
+lgpio.gpio_claim_input(h, PIN2)
+lgpio.gpio_claim_alert(h, PIN2, lgpio.RISING_EDGE)
+lgpio.callback(h, PIN2, lgpio.RISING_EDGE, pulse_callback)
 
 # Initialize ADS1015
 i2c = busio.I2C(board.SCL, board.SDA)	# Declaring I2C object
@@ -118,12 +130,13 @@ gps_imu_proc.start()
 try:							# Try & except to give a way of ending loop someday 
 	while True:					# While loop to continue checking sensors
 		current = time.perf_counter()		# Check current time
-		if current - flast_print >= (1/550.0):
+		if current - flast_print >= (1/600.0):
 			raw_value1 = max(0, pot_channel1.value)	# Read ADC Values
 			raw_value2 = max(0, pot_channel2.value)
 			Pot1data.append([current, raw_value1])
 			Pot2data.append([current, raw_value2])
 			flast_print=current
+#			print(raw_value1, raw_value2)
 		while not gps_queue.empty():
 			GPSdata.append(gps_queue.get())
 		while not imu_queue.empty():
@@ -142,3 +155,4 @@ util_func.csvWriteUSB(IMUdata, "IMU", ["Time", "AccX", "AccY", "AccZ", "AngleX",
 util_func.csvWriteUSB(Pot1data, "Pot1", ["Time", "Raw Value"])
 util_func.csvWriteUSB(Pot2data, "Pot2", ["Time", "Raw Value"])
 util_func.csvWriteUSB(Hall1data, "Hall1", ["Time", "Pulse Counts"])
+util_func.csvWriteUSB(Hall2data, "Hall2", ["Time", "Pulse Counts"])
