@@ -99,11 +99,12 @@ def imu_gps_process(conn):
 			if conn.poll():
 				if conn.recv() == "STOP":
 					break
-	except KeyboardInterrupt:
+	except Exception as e:
 		pass
-
-	conn.send((GPSdata_local, IMUdata_local))
-	conn.close()
+	finally:
+		print("imu_gps_process exiting...")
+		conn.send((GPSdata_local, IMUdata_local))
+		conn.close()
 
 # Configure Hall Effect
 CHIP = 0
@@ -152,9 +153,9 @@ except KeyboardInterrupt:	# Ctrl+C sends keyboard interupt and stops loop
 
 # Close serial devices
 parent_conn.send("STOP")
-gps_imu_proc.join(timeout=1)
+gps_imu_proc.join(timeout=2)
 
-if parent_conn.poll():
+if parent_conn.poll(timeout = 1):
 	data = parent_conn.recv()
 	GPSdata, IMUdata = data
 
