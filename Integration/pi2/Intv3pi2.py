@@ -80,7 +80,7 @@ try:							# Try & except to give a way of ending loop someday
 			gpstemp = [time.perf_counter(), gps.latitude, gps.longitude, gps.altitude_m, gps.speed_kmh, gps.satellites]		# Current time step GPS data
 			GPSdata.append(gpstemp)			# Append GPS data to big list
 			IMUdata.append(imutemp)			# Append IMU data to big list
-			print("GPS")
+#			print("GPS")
 		if current - flast_print >= interval2:
 			raw_value = pot_channel1.value	# Read ADC Values
 			voltage = round(pot_channel1.voltage, 2)	# Read ADC Voltage
@@ -88,7 +88,7 @@ try:							# Try & except to give a way of ending loop someday
 				raw_value = 0
 				voltage = 0.00
 #			print("=" * 120)
-			#print(f"Time: {time.perf_counter():.6f}s | Raw Value: {raw_value}, Voltage: {voltage:.2f} V")
+			print(f"Time: {time.perf_counter():.6f}s | Raw Value: {raw_value}, Voltage: {voltage:.2f} V")
 			Pot1data.append([time.perf_counter(), raw_value, voltage])
 			flast_print=current
 
