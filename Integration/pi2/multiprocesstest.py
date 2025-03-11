@@ -104,10 +104,8 @@ try:							# Try & except to give a way of ending loop someday
 			flast_print=current
 		while not gps_queue.empty():
 			GPSdata.append(gps_queue.get())
-
 		while not imu_queue.empty():
 			IMUdata.append(imu_queue.get())
-			print(imu_queue.get())
 except KeyboardInterrupt:	# Ctrl+C sends keyboard interupt and stops loop
 	pass			# Does literally nothing but stop python from whining
 
