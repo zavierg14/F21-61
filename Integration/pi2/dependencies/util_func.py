@@ -92,7 +92,7 @@ def csvWriteUSB(data, title, headers):
 	date_folder = os.path.join(base_folder, datetime.datetime.now().strftime('%Y-%m-%d-%H-%M'))
 	os.makedirs(date_folder, exist_ok=True)
 
-	filename = f"{title}{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}.csv"
+	filename = f"{title}.csv"
 	filepath = os.path.join(date_folder, filename)
 
 	with open(filepath,mode = 'w', newline ='') as file:
