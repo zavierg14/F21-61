@@ -62,6 +62,7 @@ Pot2data = [[time.perf_counter(), 0]]	# Time/rawvalue
 slast_print = time.perf_counter()	# Start time for sampling
 flast_print = slast_print
 GPSIMURUN = True
+data_lock = threading.Lock()
 
 # GPS & IMU Thread Function
 def imu_gps_thread():
@@ -74,25 +75,26 @@ def imu_gps_thread():
 	if GPSIMURUN:
 		while True:
 			current = time.perf_counter()
-			if current - slast_print >= interval:
-				slast_print = current
-				gps.update()
-				if not gps.has_fix:
+			gpstemp = [time.perf_counter(), None, None, None, None, None]
+			imutemp = [time.perf_counter(), 0,0,0,0,0,0]
+			gps.update()
+			with data_lock:
+				if current - slast_print >= interval:
+					slast_print = current
+					if gps.has_fix:
+						gpstemp = [time.perf_counter(), gps.latitude,
+							gps.longitude, gps.altitude_m, gps.speed_kmh,
+							gps.satellites]
 					imutemp = [time.perf_counter(), device.getDeviceData("accX"),
 						device.getDeviceData("accY"), device.getDeviceData("accZ"),
 						device.getDeviceData("angleX"), device.getDeviceData("angleY"),
 						device.getDeviceData("angleZ")]
-					continue
-				imutemp = [time.perf_counter(), device.getDeviceData("accX"),
-					device.getDeviceData("accY"), device.getDeviceData("accZ"),
-					device.getDeviceData("angleX"), device.getDeviceData("angleY"),
-					device.getDeviceData("angleZ")]
-				gpstemp = [temp.perf_counter(), gps.latitude, gps.longitude, gps.altitude_m, gps.speed_kmh, gps.satellites]
-				GPSdata.append(gpstemp)
-				IMUdata.append(imutemp)
+					GPSdata.append(gpstemp)
+					IMUdata.append(imutemp)
 
 # Start GPS & IMU processing in a seperate thread
-threading.Thread(target=imu_gps_thread, daemon=True).start()
+gps_imu_thread = threading.Thread(target=imu_gps_thread, daemon=True)
+gps_imu_thread.start()
 
 # Meat of recording and printing data
 try:							# Try & except to give a way of ending loop someday 
@@ -115,12 +117,15 @@ except KeyboardInterrupt:	# Ctrl+C sends keyboard interupt and stops loop
 
 # Close serial devices
 GPSIMURUN = False
+time.sleep(5)
+gps_imu_thread.join(timeout = 1)
 GPSser.close()			# Closes gps serial
 device.closeDevice()		# Closes IMU serial and stops thread - can take a few seconds don't freak out :)
 
 # Write to file
-util_func.csvWriteUSB(GPSdata, "GPS", ["Time", "Lat", "Long", "Alt", "Speed", "Sats"])				# GPS
-util_func.csvWriteUSB(IMUdata, "IMU", ["Time", "AccX", "AccY", "AccZ", "AngleX", "AngleY", "AngleZ"])		# IMU
+with data_lock:
+	util_func.csvWriteUSB(GPSdata, "GPS", ["Time", "Lat", "Long", "Alt", "Speed", "Sats"])				# GPS
+	util_func.csvWriteUSB(IMUdata, "IMU", ["Time", "AccX", "AccY", "AccZ", "AngleX", "AngleY", "AngleZ"])		# IMU
 util_func.csvWriteUSB(Pot1data, "Pot1", ["Time", "Raw Value"])
 util_func.csvWriteUSB(Pot2data, "Pot2", ["Time", "Raw Value"])
 
