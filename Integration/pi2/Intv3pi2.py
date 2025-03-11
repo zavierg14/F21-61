@@ -96,7 +96,7 @@ try:							# Try & except to give a way of ending loop someday
 				raw_value2 = 0
 				volatage2 = 0.00
 #			print("=" * 80)
-#			print(f"Time: {time.perf_counter():.6f}s | Voltage 1: {voltage1:.2f} |, Voltage 2: {voltage2:.2f} V")
+			print(f"Time: {time.perf_counter():.6f}s | Voltage 1: {voltage1:.2f} |, Voltage 2: {voltage2:.2f} V")
 			Pot1data.append([time.perf_counter(), raw_value1, voltage1])
 			Pot2data.append([time.perf_counter(), raw_value1, voltage2])
 			flast_print=current
