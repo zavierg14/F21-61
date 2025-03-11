@@ -1,6 +1,6 @@
 # Kaleb Binger 2/2025
 # F21-61 - Swap Hudson
-# Testing multiprocessing to prevent slowdowns
+# v5: moved IMU and GPS to a seperate process to keep potentiometer running fast enough
 
 import serial			# Serial to mess w sensors
 import time			# Lets us check what time it is
