@@ -17,18 +17,31 @@ import busio
 import adafruit_ads1x15.ads1015 as ADS
 from adafruit_ads1x15.analog_in import AnalogIn
 import multiprocessing
+import lgpio
 
 # Sampling Frequency Setup
 slow_sampling_freq = 10 #Hz (GPS & IMU sampling rate)
 interval = 1/slow_sampling_freq #s GPS & IMU interval
 fast_sampling_freq = 3300 #Hz (ADS1015 sampling rate)
 interval2 = 1/fast_sampling_freq #s ADS interval
+pulse_count1 = 0
 
 # Data Storage
 GPSdata = []
 IMUdata = []
 Pot1data = []
 Pot2data = []
+Hall1data = []
+
+def pulse_callback(chip, gpio, level, timestamp):
+	'''
+	callback function that gets called on the rising edge of the hall sensor output.
+	increments pulse counter
+	'''
+	global pulse_count
+	if level == 1:
+		pulse_count1 +=1
+		Hall1data = [time.perf_counter(), pulse_count]
 
 def imu_gps_process(gps_queue, imu_queue):
 	'''Runs GPS and IMU processing in a seperate process to avoid slowing down
@@ -73,6 +86,13 @@ def imu_gps_process(gps_queue, imu_queue):
 			# Put data into queues
 			gps_queue.put(gps_data)
 			imu_queue.put(imu_data)
+# Configure Hall Effect
+CHIP = 0
+PIN = 17
+h = lgpio.gpiochip_open(CHIP)
+lgpio.gpio_claim_input(h, PIN)
+lgpio.gpio_claim_alert(h, PIN, lgpio.RISING_EDGE)
+lgpio.callback(h, PIN, lgpio.RISING_EDGE, pulse_callback)
 
 # Initialize ADS1015
 i2c = busio.I2C(board.SCL, board.SDA)	# Declaring I2C object
@@ -113,12 +133,11 @@ except KeyboardInterrupt:	# Ctrl+C sends keyboard interupt and stops loop
 # Close serial devices
 gps_imu_proc.terminate()
 gps_imu_proc.join(timeout=1)
-#GPSser.close()			# Closes gps serial
-#device.closeDevice()		# Closes IMU serial and stops thread - can take a few seconds don't freak out :)
+lgpio.gpiochip_close(h)
 
 # Write to file
 util_func.csvWriteUSB(GPSdata, "GPS", ["Time", "Lat", "Long", "Alt", "Speed", "Sats"])				# GPS
 util_func.csvWriteUSB(IMUdata, "IMU", ["Time", "AccX", "AccY", "AccZ", "AngleX", "AngleY", "AngleZ"])		# IMU
 util_func.csvWriteUSB(Pot1data, "Pot1", ["Time", "Raw Value"])
 util_func.csvWriteUSB(Pot2data, "Pot2", ["Time", "Raw Value"])
-
+util_func.csvWriteUSB(Hall1data, "Hall1", ["Time", "Pulse Counts"])
