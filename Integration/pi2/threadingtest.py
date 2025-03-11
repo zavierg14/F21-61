@@ -108,7 +108,7 @@ try:							# Try & except to give a way of ending loop someday
 				raw_value1 = 0
 			if raw_value2 < 0:
 				raw_value2 = 0
-			print(f"Time: {time.perf_counter()-flast_print:.5f}s | Voltage 1: {raw_value1:.2f} |, Voltage 2: {raw_value2:.2f} V")
+#			print(f"Time: {time.perf_counter()-flast_print:.5f}s | Voltage 1: {raw_value1:.2f} |, Voltage 2: {raw_value2:.2f} V")
 			Pot1data.append([time.perf_counter(), raw_value1])
 			Pot2data.append([time.perf_counter(), raw_value2])
 			flast_print=current
