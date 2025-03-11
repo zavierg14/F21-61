@@ -38,11 +38,11 @@ def pulse_callback(chip, gpio, level, timestamp):
 	callback function that gets called on the rising edge of the hall sensor output.
 	increments pulse counter
 	'''
-	global pulse_count
+	global pulse_count1
 	if level == 1:
 		pulse_count1 +=1
-		Hall1data = [time.perf_counter(), pulse_count]
-
+		Hall1data = [time.perf_counter(), pulse_count1]
+		print(Hall1data)
 def imu_gps_process(gps_queue, imu_queue):
 	'''Runs GPS and IMU processing in a seperate process to avoid slowing down
 	other sampling
