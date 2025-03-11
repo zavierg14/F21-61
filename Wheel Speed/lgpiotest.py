@@ -20,16 +20,16 @@ def main():
 
     # Open GPIO chip
     h = lgpio.gpiochip_open(CHIP)
-    
+
     # Set GPIO17 as an input with pull-down resistor
     lgpio.gpio_claim_input(h, PIN)
-    
+
     # Set edge detection for rising pulses
-    lgpio.gpio_set_edge_alert(h, PIN, lgpio.RISING_EDGE)
-    
+    lgpio.gpio_claim_alert(h, PIN, lgpio.RISING_EDGE)
+
     # Register the callback function
     lgpio.callback(h, PIN, lgpio.RISING_EDGE, pulse_callback)
-    
+
     print("Starting pulse counting. Press CTRL+C to stop.")
     try:
         while True:
