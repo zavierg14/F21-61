@@ -97,7 +97,8 @@ def imu_gps_process(conn):
 
 			# Check if the main process signals termination
 			if conn.poll():
-				break
+				if conn.recv() == "STOP":
+					break
 	except KeyboardInterrupt:
 		pass
 
@@ -132,7 +133,7 @@ flast_print = slast_print
 
 # Start GPS & IMU processing
 parent_conn, child_conn = multiprocessing.Pipe()
-gps_imu_proc = multiprocessing.Process(target=imu_gps_process, args=(child_conn))
+gps_imu_proc = multiprocessing.Process(target=imu_gps_process, args=(child_conn,))
 gps_imu_proc.start()
 
 # Meat of recording and printing data
