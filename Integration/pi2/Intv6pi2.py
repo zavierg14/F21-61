@@ -118,7 +118,7 @@ gps_imu_proc.start()
 try:							# Try & except to give a way of ending loop someday 
 	while True:					# While loop to continue checking sensors
 		current = time.perf_counter()		# Check current time
-		if current - flast_print >= interval2:
+		if current - flast_print >= (1/550.0):
 			raw_value1 = max(0, pot_channel1.value)	# Read ADC Values
 			raw_value2 = max(0, pot_channel2.value)
 			Pot1data.append([current, raw_value1])
