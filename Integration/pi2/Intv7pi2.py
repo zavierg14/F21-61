@@ -20,7 +20,7 @@ import multiprocessing
 import lgpio
 import gc
 
-gc.disble()
+gc.disable()
 
 # Sampling Frequency Setup
 slow_sampling_freq = 10 #Hz (GPS & IMU sampling rate)
@@ -167,3 +167,4 @@ util_func.csvWriteUSB(Pot1data, "Pot1", ["Time", "RawValue"])
 util_func.csvWriteUSB(Pot2data, "Pot2", ["Time", "RawValue"])
 util_func.csvWriteUSB(Hall1data, "Hall1", ["Time", "PulseCounts"])
 util_func.csvWriteUSB(Hall2data, "Hall2", ["Time", "PulseCounts"])
+gc.collect()
