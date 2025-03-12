@@ -101,8 +101,9 @@ pot_channel1 = AnalogIn(adc, ADS.P0)	# Initialize channel in Single-Ended Mode
 pot_channel2 = AnalogIn(adc, ADS.P1)	# Initialize channel 2 in Single-Ended Mode
 
 # Housekeeping before recording data
-slast_print = time.perf_counter()	# Start time for sampling
-flast_print = slast_print
+#slast_print = time.perf_counter()	# Start time for sampling
+flast_print = time.perf_counter()
+start = time.perf_counter()
 '''
 # Start GPS & IMU processing
 gps_queue = multiprocessing.Queue()
@@ -119,7 +120,11 @@ try:							# Try & except to give a way of ending loop someday
 			raw_value2 = max(0, pot_channel2.value)
 			Pot1data.append([current, raw_value1])
 			Pot2data.append([current, raw_value2])
+			diff = current - flast_print
+			if diff > (.006):
+				print(f"Time: {current-start:.2f} | dt: {diff}")
 			flast_print=current
+#				print("collected")
 #			print(raw_value1, raw_value2)
 except KeyboardInterrupt:	# Ctrl+C sends keyboard interupt and stops loop
 	pass			# Does literally nothing but stop python from whining
