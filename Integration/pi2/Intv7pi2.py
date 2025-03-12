@@ -51,7 +51,7 @@ def pulse_callback(chip, gpio, level, timestamp):
 			Hall2data.append([time.perf_counter(), pulse_count2])
 			print("Hall2:", Hall2data[-1])
 
-def imu_gps_process(conn):
+def imu_gps_process(gps_queue, imu_queue):
 	'''Runs GPS and IMU processing in a seperate process to avoid slowing down
 	other sampling
 	'''
@@ -74,37 +74,29 @@ def imu_gps_process(conn):
 	last_update = time.perf_counter()
 	GPSdata_local = []
 	IMUdata_local = []
-	try:
-		while True:
-			current_time = time.perf_counter()
-			if current_time - last_update >= interval:
-				last_update = current_time
 
-				# Read GPS data
+	while True:
+		current_time = time.perf_counter()
+		if current_time - last_update >= interval:
+			last_update = current_time
+
+			# Read GPS data
+			if gps.has_fix:
 				gps.update()
 				gps_data = [current_time, gps.latitude, gps.longitude, gps.altitude_m, gps.speed_kmh, gps.satellites]
 				GPSdata_local.append(gps_data)
-
-				# Read IMU data
-				imu_data = [current_time,
-					device.getDeviceData("accX"),
-					device.getDeviceData("accY"),
-					device.getDeviceData("accZ"),
-					device.getDeviceData("angleX"),
-					device.getDeviceData("angleY"),
-					device.getDeviceData("angleZ")]
-				IMUdata_local.append(imu_data)
-
-			# Check if the main process signals termination
-			if conn.poll():
-				if conn.recv() == "STOP":
-					break
-	except Exception as e:
-		pass
-	finally:
-		print("imu_gps_process exiting...")
-		conn.send((GPSdata_local, IMUdata_local))
-		conn.close()
+			# Read IMU data
+			imu_data = [current_time,
+				device.getDeviceData("accX"),
+				device.getDeviceData("accY"),
+				device.getDeviceData("accZ"),
+				device.getDeviceData("angleX"),
+				device.getDeviceData("angleY"),
+				device.getDeviceData("angleZ")]
+			IMUdata_local.append(imu_data)
+			# Put data into queues
+			gps_queue.put(GPSdata_local)
+			imu_queue.put(IMUdata_local)
 
 # Configure Hall Effect
 CHIP = 0
@@ -133,8 +125,9 @@ slast_print = time.perf_counter()	# Start time for sampling
 flast_print = slast_print
 
 # Start GPS & IMU processing
-parent_conn, child_conn = multiprocessing.Pipe()
-gps_imu_proc = multiprocessing.Process(target=imu_gps_process, args=(child_conn,))
+gps_queue = multiprocessing.Queue()
+imu_queue = multiprocessing.Queue()
+gps_imu_proc = multiprocessing.Process(target=imu_gps_process, args=(gps_queue, imu_queue), daemon=True)
 gps_imu_proc.start()
 
 # Meat of recording and printing data
@@ -151,16 +144,14 @@ try:							# Try & except to give a way of ending loop someday
 except KeyboardInterrupt:	# Ctrl+C sends keyboard interupt and stops loop
 	pass			# Does literally nothing but stop python from whining
 
+while not gps_queue.empty():
+	GPSdata.append(gps_queue.get())
+while not imu_queue.empty():
+	IMUdata.append(imu_queue.get())
+
 # Close serial devices
-parent_conn.send("STOP")
-gps_imu_proc.join(timeout=2)
-
-if parent_conn.poll(timeout = 1):
-	data = parent_conn.recv()
-	GPSdata, IMUdata = data
-
-else:
-	GPSdata, IMUdata = [], []
+gps_imu_proc.terminate()
+gps_imu_proc.join(timeout=1)
 lgpio.gpiochip_close(h)
 
 # Write to file
