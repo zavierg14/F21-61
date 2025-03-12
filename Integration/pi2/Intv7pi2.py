@@ -45,11 +45,11 @@ def pulse_callback(chip, gpio, level, timestamp):
 		if gpio == PIN1:
 			pulse_count1 +=1
 			Hall1data.append([time.perf_counter(), pulse_count1])
-			print("Hall1:", Hall1data[-1])
+#			print("Hall1:", Hall1data[-1])
 		elif gpio == PIN2:
 			pulse_count2 += 1
 			Hall2data.append([time.perf_counter(), pulse_count2])
-			print("Hall2:", Hall2data[-1])
+#			print("Hall2:", Hall2data[-1])
 
 def imu_gps_process(gps_queue, imu_queue):
 	'''Runs GPS and IMU processing in a seperate process to avoid slowing down
@@ -81,10 +81,11 @@ def imu_gps_process(gps_queue, imu_queue):
 			last_update = current_time
 
 			# Read GPS data
-			if gps.has_fix:
-				gps.update()
-				gps_data = [current_time, gps.latitude, gps.longitude, gps.altitude_m, gps.speed_kmh, gps.satellites]
-				GPSdata_local.append(gps_data)
+			gps.update()
+			gps_data = [current_time, gps.latitude, gps.longitude, gps.altitude_m, gps.speed_kmh, gps.satellites]
+#			print(gps_data)
+			GPSdata_local.append(gps_data)
+
 			# Read IMU data
 			imu_data = [current_time,
 				device.getDeviceData("accX"),
@@ -93,7 +94,9 @@ def imu_gps_process(gps_queue, imu_queue):
 				device.getDeviceData("angleX"),
 				device.getDeviceData("angleY"),
 				device.getDeviceData("angleZ")]
+#			print(imu_data)
 			IMUdata_local.append(imu_data)
+
 			# Put data into queues
 			gps_queue.put(GPSdata_local)
 			imu_queue.put(IMUdata_local)
@@ -145,9 +148,9 @@ except KeyboardInterrupt:	# Ctrl+C sends keyboard interupt and stops loop
 	pass			# Does literally nothing but stop python from whining
 
 while not gps_queue.empty():
-	GPSdata.append(gps_queue.get())
+	GPSdata=gps_queue.get()
 while not imu_queue.empty():
-	IMUdata.append(imu_queue.get())
+	IMUdata=imu_queue.get()
 
 # Close serial devices
 gps_imu_proc.terminate()
