@@ -20,7 +20,7 @@ import multiprocessing
 import lgpio
 import gc
 
-#gc.disble()
+gc.disable()
 
 Pot1data = []
 Pot2data = []
@@ -124,6 +124,8 @@ try:							# Try & except to give a way of ending loop someday
 			if diff > (.006):
 				print(f"Time: {current-start:.2f} | dt: {diff}")
 			flast_print=current
+			if current % 500 < .02:
+				gc.collect()
 #				print("collected")
 #			print(raw_value1, raw_value2)
 except KeyboardInterrupt:	# Ctrl+C sends keyboard interupt and stops loop
@@ -148,3 +150,4 @@ util_func.csvWriteUSB(Pot2data, "Pot2", ["Time", "RawValue"])
 '''util_func.csvWriteUSB(Hall1data, "Hall1", ["Time", "PulseCounts"])
 util_func.csvWriteUSB(Hall2data, "Hall2", ["Time", "PulseCounts"])
 '''
+gc.collect()
