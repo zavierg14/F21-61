@@ -33,8 +33,7 @@ pulse_count2 = 0
 # Data Storage
 GPSdata = []
 IMUdata = []
-Pot1data = []
-Pot2data = []
+Potdata = []
 Hall1data = []
 Hall2data = []
 
@@ -86,9 +85,6 @@ def imu_gps_process(gps_queue, imu_queue):
 			# Read GPS data
 			gps.update()
 			gps_data = [current_time, gps.latitude, gps.longitude, gps.altitude_m, gps.speed_kmh, gps.satellites]
-#			print(gps_data)
-			GPSdata_local.append(gps_data)
-
 			# Read IMU data
 			imu_data = [current_time,
 				device.getDeviceData("accX"),
@@ -98,11 +94,10 @@ def imu_gps_process(gps_queue, imu_queue):
 				device.getDeviceData("angleY"),
 				device.getDeviceData("angleZ")]
 #			print(imu_data)
-			IMUdata_local.append(imu_data)
 
 			# Put data into queues
-			gps_queue.put(GPSdata_local)
-			imu_queue.put(IMUdata_local)
+			gps_queue.put(gps_data)
+			imu_queue.put(imu_data)
 
 # Configure Hall Effect
 CHIP = 0
@@ -143,17 +138,15 @@ try:							# Try & except to give a way of ending loop someday
 		if current - flast_print >= (1/600.0):
 			raw_value1 = max(0, pot_channel1.value)	# Read ADC Values
 			raw_value2 = max(0, pot_channel2.value)
-			Pot1data.append([current, raw_value1])
-			Pot2data.append([current, raw_value2])
+			Potdata.append([current, raw_value1, raw_value2])
 			flast_print=current
+		while not gps_queue.empty():
+			GPSdata.append(gps_queue.get())
+		while not imu_queue.empty():
+			IMUdata.append(imu_queue.get())
 #			print(raw_value1, raw_value2)
 except KeyboardInterrupt:	# Ctrl+C sends keyboard interupt and stops loop
 	pass			# Does literally nothing but stop python from whining
-
-while not gps_queue.empty():
-	GPSdata=gps_queue.get()
-while not imu_queue.empty():
-	IMUdata=imu_queue.get()
 
 # Close serial devices
 gps_imu_proc.terminate()
@@ -163,8 +156,7 @@ lgpio.gpiochip_close(h)
 # Write to file
 util_func.csvWriteUSB(GPSdata, "GPS", ["Time", "Lat", "Long", "Alt", "Speed", "Sats"])				# GPS
 util_func.csvWriteUSB(IMUdata, "IMU", ["Time", "AccX", "AccY", "AccZ", "AngleX", "AngleY", "AngleZ"])		# IMU
-util_func.csvWriteUSB(Pot1data, "Pot1", ["Time", "RawValue"])
-util_func.csvWriteUSB(Pot2data, "Pot2", ["Time", "RawValue"])
+util_func.csvWriteUSB(Potdata, "Pot", ["Time", "RawValue1", "RawValue2"])
 util_func.csvWriteUSB(Hall1data, "Hall1", ["Time", "PulseCounts"])
 util_func.csvWriteUSB(Hall2data, "Hall2", ["Time", "PulseCounts"])
 gc.collect()
