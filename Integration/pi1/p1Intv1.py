@@ -19,11 +19,11 @@ leftWheel = []
 rightWheel = []
 slipData = []
 
-#  Setup for CAN bus
-bustype = 'socketcan'
-channel = 'can0'
-bitrate = 500000
-bus = can.interface.Bus(channel=channel, bustype=bustype, bitrate=bitrate)
+#  Setup for CAN bus  #
+#bustype = 'socketcan'
+#channel = 'can0'
+#bitrate = 500000
+#bus = can.interface.Bus(channel=channel, bustype=bustype, bitrate=bitrate)
 
 #ADS
 i2c = busio.I2C(board.SCL, board.SDA)
@@ -84,16 +84,16 @@ try:
 except KeyboardInterrupt:
 	print("\nSending CAN Msg...")
 	
-	for data in pot1Data:
-		send_can(0x01, data[0], data[1])
-	for data in pot2Data:
-		send_can(0x02, data[0], data[1])
-	for data in steeringData:
-		send_can(0x03, data[0], data[1])
+	#for data in pot1Data:
+		#send_can(0x01, data[0], data[1])
+	#for data in pot2Data:
+		#send_can(0x02, data[0], data[1])
+	#for data in steeringData:
+		#send_can(0x03, data[0], data[1])
 		 
-		 
-
-	
+	util_func.csvWriteUSB(pot1Data, "P1", ["Time", "Raw Val"])	 
+	util_func.csvWriteUSB(pot2Data, "P2", ["Time", "Raw Val"])	 
+	util_func.csvWriteUSB(steeringData, "Steering", ["Time", "Angle"])	 
 
 
 
