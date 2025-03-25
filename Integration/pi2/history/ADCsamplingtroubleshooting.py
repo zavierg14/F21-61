@@ -1,3 +1,4 @@
+#! ~/env/bin/python3
 # Kaleb Binger 2/2025
 # F21-61 - Swap Hudson
 # v5: moved IMU and GPS to a seperate process to keep potentiometer running fast enough
@@ -16,23 +17,19 @@ import busio
 import adafruit_ads1x15.ads1015 as ADS
 from adafruit_ads1x15.analog_in import AnalogIn
 import multiprocessing
+import lgpio
+import gc
 
-# Sampling Frequency Setup
-slow_sampling_freq = 10 #Hz (GPS & IMU sampling rate)
-interval = 1/slow_sampling_freq #s GPS & IMU interval
-fast_sampling_freq = 3300 #Hz (ADS1015 sampling rate)
-interval2 = 1/fast_sampling_freq #s ADS interval
+gc.disable()
 
-# Data Storage
-GPSdata = []
-IMUdata = []
 Pot1data = []
 Pot2data = []
 
+'''
 def imu_gps_process(gps_queue, imu_queue):
-	'''Runs GPS and IMU processing in a seperate process to avoid slowing down
+	Runs GPS and IMU processing in a seperate process to avoid slowing down
 	other sampling
-	'''
+	
 	# Initialize GPS
 	GPSserial_port = '/dev/ttyUSB0'
 	GPSbaud_rate = 115200
@@ -50,6 +47,8 @@ def imu_gps_process(gps_queue, imu_queue):
 	device.openDevice()                                 						# Open serial port
 
 	last_update = time.perf_counter()
+	GPSdata_local = []
+	IMUdata_local = []
 
 	while True:
 		current_time = time.perf_counter()
@@ -59,6 +58,8 @@ def imu_gps_process(gps_queue, imu_queue):
 			# Read GPS data
 			gps.update()
 			gps_data = [current_time, gps.latitude, gps.longitude, gps.altitude_m, gps.speed_kmh, gps.satellites]
+#			print(gps_data)
+			GPSdata_local.append(gps_data)
 
 			# Read IMU data
 			imu_data = [current_time,
@@ -68,56 +69,85 @@ def imu_gps_process(gps_queue, imu_queue):
 				device.getDeviceData("angleX"),
 				device.getDeviceData("angleY"),
 				device.getDeviceData("angleZ")]
+#			print(imu_data)
+			IMUdata_local.append(imu_data)
 
 			# Put data into queues
-			gps_queue.put(gps_data)
-			imu_queue.put(imu_data)
+			gps_queue.put(GPSdata_local)
+			imu_queue.put(IMUdata_local)
+'''
+# Configure Hall Effect
+'''CHIP = 0
+PIN1 = 17
+PIN2 = 27
+h = lgpio.gpiochip_open(CHIP)
+lgpio.gpio_claim_input(h, PIN1)
+lgpio.gpio_claim_alert(h, PIN1, lgpio.RISING_EDGE)
+lgpio.callback(h, PIN1, lgpio.RISING_EDGE, pulse_callback)
 
+lgpio.gpio_claim_input(h, PIN2)
+lgpio.gpio_claim_alert(h, PIN2, lgpio.RISING_EDGE)
+lgpio.callback(h, PIN2, lgpio.RISING_EDGE, pulse_callback)
+'''
 # Initialize ADS1015
 i2c = busio.I2C(board.SCL, board.SDA)	# Declaring I2C object
 adc = ADS.ADS1015(i2c)			# ADS1015 object
 CONFIG_REGISTER = 0x01 			# Honestly idk ask zavier
 util_func.set_continuous_mode(adc, CONFIG_REGISTER)	# Enable continuous mode
+fast_sampling_freq = 3300;
+interval2 = 1/3300;
 adc.data_rate = fast_sampling_freq	# Set ADS1015 to an appropriate sample rate (predetermined by hardware-see datasheet)
 pot_channel1 = AnalogIn(adc, ADS.P0)	# Initialize channel in Single-Ended Mode
 pot_channel2 = AnalogIn(adc, ADS.P1)	# Initialize channel 2 in Single-Ended Mode
 
 # Housekeeping before recording data
-slast_print = time.perf_counter()	# Start time for sampling
-flast_print = slast_print
-
+#slast_print = time.perf_counter()	# Start time for sampling
+flast_print = time.perf_counter()
+start = time.perf_counter()
+'''
 # Start GPS & IMU processing
 gps_queue = multiprocessing.Queue()
 imu_queue = multiprocessing.Queue()
 gps_imu_proc = multiprocessing.Process(target=imu_gps_process, args=(gps_queue, imu_queue), daemon=True)
 gps_imu_proc.start()
-
+'''
 # Meat of recording and printing data
 try:							# Try & except to give a way of ending loop someday 
 	while True:					# While loop to continue checking sensors
 		current = time.perf_counter()		# Check current time
-		if current - flast_print >= interval2:
+		if current - flast_print >= (1/600.0):
 			raw_value1 = max(0, pot_channel1.value)	# Read ADC Values
 			raw_value2 = max(0, pot_channel2.value)
 			Pot1data.append([current, raw_value1])
 			Pot2data.append([current, raw_value2])
+			diff = current - flast_print
+			if diff > (.006):
+				print(f"Time: {current-start:.2f} | dt: {diff}")
 			flast_print=current
-		while not gps_queue.empty():
-			GPSdata.append(gps_queue.get())
-		while not imu_queue.empty():
-			IMUdata.append(imu_queue.get())
+			if current % 500 < .02:
+				gc.collect()
+#				print("collected")
+#			print(raw_value1, raw_value2)
 except KeyboardInterrupt:	# Ctrl+C sends keyboard interupt and stops loop
 	pass			# Does literally nothing but stop python from whining
-
+'''
+while not gps_queue.empty():
+	GPSdata=gps_queue.get()
+while not imu_queue.empty():
+	IMUdata=imu_queue.get()
+'''
 # Close serial devices
-gps_imu_proc.terminate()
+'''gps_imu_proc.terminate()
 gps_imu_proc.join(timeout=1)
-#GPSser.close()			# Closes gps serial
-#device.closeDevice()		# Closes IMU serial and stops thread - can take a few seconds don't freak out :)
-
+lgpio.gpiochip_close(h)
+'''
 # Write to file
-util_func.csvWriteUSB(GPSdata, "GPS", ["Time", "Lat", "Long", "Alt", "Speed", "Sats"])				# GPS
+'''util_func.csvWriteUSB(GPSdata, "GPS", ["Time", "Lat", "Long", "Alt", "Speed", "Sats"])				# GPS
 util_func.csvWriteUSB(IMUdata, "IMU", ["Time", "AccX", "AccY", "AccZ", "AngleX", "AngleY", "AngleZ"])		# IMU
-util_func.csvWriteUSB(Pot1data, "Pot1", ["Time", "Raw Value"])
-util_func.csvWriteUSB(Pot2data, "Pot2", ["Time", "Raw Value"])
-
+'''
+util_func.csvWriteUSB(Pot1data, "Pot1", ["Time", "RawValue"])
+util_func.csvWriteUSB(Pot2data, "Pot2", ["Time", "RawValue"])
+'''util_func.csvWriteUSB(Hall1data, "Hall1", ["Time", "PulseCounts"])
+util_func.csvWriteUSB(Hall2data, "Hall2", ["Time", "PulseCounts"])
+'''
+gc.collect()
