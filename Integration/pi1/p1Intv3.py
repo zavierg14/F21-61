@@ -71,7 +71,7 @@ def parse_slip_message(msg):
     return raw * 0.1
 
 # -----------------------------------------
-# Hall Effect Sensor Setup (GPIO17)
+# GPIO Setup (Hall Effect Sensor & Switch)
 # -----------------------------------------
 pulse_count = 0
 last_pulse_count = 0
@@ -83,6 +83,14 @@ def pulse_callback(channel):
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(17, GPIO.IN, pull_up_down=GPIO.PUD_OFF)
 GPIO.add_event_detect(17, GPIO.RISING, callback=pulse_callback, bouncetime=20)
+
+START_SWITCH_PIN = 27
+GPIO.setup(START_SWITCH_PIN, GPIO.IN)
+
+print("Waiting for switch to be flipped ON...")
+while GPIO.input(START_SWITCH_PIN) == GPIO.LOW:
+    time.sleep(0.05)
+print("Switch flipped. Starting data acquisition...")
 
 # -----------------------------------------
 # Sampling Intervals
