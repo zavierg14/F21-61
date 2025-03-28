@@ -133,52 +133,59 @@ def imu_gps_process(gps_queue, imu_queue):
 			imu_queue.put(imu_data)
 
 def stop_callbacks():
-    global hall1, hall2
-    lgpio.callback_cancel(hall1)
-    lgpio.callback_cancel(hall2)
+	global hall1, hall2
+	hall1.cancel()
+	hall2.cancel()
 
 ###########################
 # --- Data Aquisition --- #
 ###########################
+while True:
+	msg = can.recv()
+	if msg == 0x01:
+		# Start GPS & IMU processing
+		gps_queue = multiprocessing.Queue()
+		imu_queue = multiprocessing.Queue()
+		gps_imu_proc = multiprocessing.Process(target=imu_gps_process, args=(gps_queue, imu_queue), daemon=True)
+		gps_imu_proc.start()
 
-# Start GPS & IMU processing
-gps_queue = multiprocessing.Queue()
-imu_queue = multiprocessing.Queue()
-gps_imu_proc = multiprocessing.Process(target=imu_gps_process, args=(gps_queue, imu_queue), daemon=True)
-gps_imu_proc.start()
+		# Start hall Effects
+		hall1 = lgpio.callback(h, PIN1, lgpio.RISING_EDGE, pulse_callback)
+		hall2 = lgpio.callback(h, PIN2, lgpio.RISING_EDGE, pulse_callback)
 
-# Start hall Effects
-hall1 = lgpio.callback(h, PIN1, lgpio.RISING_EDGE, pulse_callback)
-hall2 = lgpio.callback(h, PIN2, lgpio.RISING_EDGE, pulse_callback)
+		# Meat of recording and printing data
+		try:							# Try & except to give a way of ending loop someday 
+			while msg == 0x02:				# While loop to continue checking sensors
+				current = time.perf_counter()		# Check current time
+				if current - last_print >= (1/600.0):
+					raw_value1 = max(0, pot_channel1.value)	# Read ADC Values
+					raw_value2 = max(0, pot_channel2.value)
+					Potdata.append([current, raw_value1, raw_value2])
+					last_print=current
+				while not gps_queue.empty():
+					GPSdata.append(gps_queue.get())
+				while not imu_queue.empty():
+					IMUdata.append(imu_queue.get())
+				if current - can_update >= (1/10):
+					msg = can.recv()
+		except msg == 0x02:	# Ctrl+C sends keyboard interupt and stops loop
+			pass			# Does literally nothing but stop python from whining
 
-# Meat of recording and printing data
-try:							# Try & except to give a way of ending loop someday 
-	while True:					# While loop to continue checking sensors
-		current = time.perf_counter()		# Check current time
-		if current - last_print >= (1/600.0):
-			raw_value1 = max(0, pot_channel1.value)	# Read ADC Values
-			raw_value2 = max(0, pot_channel2.value)
-			Potdata.append([current, raw_value1, raw_value2])
-			flast_print=current
-		while not gps_queue.empty():
-			GPSdata.append(gps_queue.get())
-		while not imu_queue.empty():
-			IMUdata.append(imu_queue.get())
-except KeyboardInterrupt:	# Ctrl+C sends keyboard interupt and stops loop
-	pass			# Does literally nothing but stop python from whining
+		# Close Devices
+		gps_imu_proc.terminate()
+		gps_imu_proc.join(timeout=1)
+		stop_callbacks()
 
-# Close serial devices
-gps_imu_proc.terminate()
-gps_imu_proc.join(timeout=1)
-stop_callbacks()
+		# Write to file
+		util_func.csvWriteUSB(GPSdata, "GPS", ["Time", "Lat", "Long", "Alt", "Speed", "Sats"])				# GPS
+		util_func.csvWriteUSB(IMUdata, "IMU", ["Time", "AccX", "AccY", "AccZ", "AngleX", "AngleY", "AngleZ"])		# IMU
+		util_func.csvWriteUSB(Potdata, "Pot", ["Time", "RawValue1", "RawValue2"])
+		util_func.csvWriteUSB(Halldata, "Hall", ["Time", "PulseCounts1", "PulseCounts2"])
+		gc.collect
 
-# Write to file
-util_func.csvWriteUSB(GPSdata, "GPS", ["Time", "Lat", "Long", "Alt", "Speed", "Sats"])				# GPS
-util_func.csvWriteUSB(IMUdata, "IMU", ["Time", "AccX", "AccY", "AccZ", "AngleX", "AngleY", "AngleZ"])		# IMU
-util_func.csvWriteUSB(Potdata, "Pot", ["Time", "RawValue1", "RawValue2"])
-util_func.csvWriteUSB(Hall1data, "Hall1", ["Time", "PulseCounts"])
-util_func.csvWriteUSB(Hall2data, "Hall2", ["Time", "PulseCounts"])
-gc.collect
+#################################
+# --- End of Script Cleanup --- #
+#################################
 
 bus.shutdown()
 lgpio.gpiochip_close(h)
