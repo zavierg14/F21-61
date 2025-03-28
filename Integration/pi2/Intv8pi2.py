@@ -1,7 +1,7 @@
 #! ~/env/bin/python3
 # Kaleb Binger 2/2025
 # F21-61 - Swap Hudson
-# v5: moved IMU and GPS to a seperate process to keep potentiometer running fast enough
+# v8: Optimizing for switch
 
 #############################
 # --- Required Packages --- #
@@ -136,7 +136,7 @@ def stop_callbacks():
     global hall1, hall2
     lgpio.callback_cancel(hall1)
     lgpio.callback_cancel(hall2)
-	
+
 ###########################
 # --- Data Aquisition --- #
 ###########################
@@ -180,6 +180,6 @@ util_func.csvWriteUSB(Hall1data, "Hall1", ["Time", "PulseCounts"])
 util_func.csvWriteUSB(Hall2data, "Hall2", ["Time", "PulseCounts"])
 gc.collect
 
-
+bus.shutdown()
 lgpio.gpiochip_close(h)
 gc.collect()
