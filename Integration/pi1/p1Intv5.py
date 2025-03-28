@@ -9,6 +9,7 @@ import dependencies.util_func as util_func
 import smbus2
 import can
 import RPi.GPIO as GPIO
+
 # -----------------------------------------
 # ADS1015 Setup
 # -----------------------------------------
@@ -24,7 +25,7 @@ channel2 = AnalogIn(adc, ADS.P1)
 # -----------------------------------------
 # AS5600 Steering Sensor Setup
 # -----------------------------------------
-AS5600_ADDR = 0x36
+AS5600_ADD R = 0x36
 RAW_ANGLE_REG = 0x0C
 
 def read_angle():
@@ -34,9 +35,9 @@ def read_angle():
     raw_angle = (data[0] << 8) | data[1]
     angle = (raw_angle / 4096.0) * 360.0
     return angle
-    
+
 # -----------------------------------------
-# CAN Setup
+# CAN Setup 
 # -----------------------------------------
 bus = can.Bus(channel='can0', bustype='socketcan', bitrate=500000)
 
@@ -44,12 +45,23 @@ def send_can_message(can_id, data):
     msg = can.Message(arbitration_id=can_id, data=data, is_extended_id=False)
     bus.send(msg)
     
+def send_can_data(can_id, timestamp, value):
+	time_bytes = int(timestamp * 1e6).to_bytes(4, 'big')
+	val_bytes = value.to_bytes(4, 'big')
+	can_data = time_bytes + val_bytes
+	send_can_message(can_id, can_data)
+	
+
+################### SET UP SLIP SENSOR HERE #########################
+
 # -----------------------------------------
-# GPIO Setup 
+# GPIO Setup (Hall Effect Sensor & Switch)
 # -----------------------------------------
 GPIO.setmode(GPIO.BCM)
 START_SWITCH_PIN = 27
 GPIO.setup(START_SWITCH_PIN, GPIO.IN)
+
+################### SET UP HALL EFFECT SENSOR HERE ##################
 
 # -----------------------------------------
 # Sampling Intervals
@@ -60,6 +72,10 @@ pot_interval = 1.0 / pot_rate
 steering_rate = 60
 steering_interval = 1.0 / steering_rate
 
+
+# -----------------------------------------
+# MAIN LOOP
+# -----------------------------------------
 try:
     print("Waiting for switch to toggle ON...")
     while True:
@@ -67,8 +83,7 @@ try:
         while GPIO.input(START_SWITCH_PIN) == GPIO.LOW:
             time.sleep(0.05)
         send_can_message(0x123, [0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
-
-
+        time.sleep(1)
         print("Switch ON: Starting data acquisition...")
 
         # Reset buffers for this session
@@ -98,11 +113,17 @@ try:
 
         print("Switch OFF: Stopping and writing CSV logs...")
         send_can_message(0x123, [0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
-        
+        time.sleep(1)
+        for data in pot1Data:
+			send_can_data(0xA11, data[0], data[1])
+		for data in pot2Data:
+			send_can_data(0xA12, data[0], data[1])
+		for data in steeringData:
+			send_can_data(0xB11, data[0], int(data[1]*100))
         util_func.csvWriteUSB(pot1Data, "P1", ["Time", "Raw Val"])
         util_func.csvWriteUSB(pot2Data, "P2", ["Time", "Raw Val"])
         util_func.csvWriteUSB(steeringData, "Steering", ["Time", "Angle"])
-        ##### SEND CAN_DATA not CSV
+
 
 except KeyboardInterrupt:
     print("\nKeyboard interrupt received. Cleaning up GPIO...")

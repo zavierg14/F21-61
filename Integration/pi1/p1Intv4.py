@@ -25,7 +25,7 @@ channel2 = AnalogIn(adc, ADS.P1)
 # -----------------------------------------
 # AS5600 Steering Sensor Setup
 # -----------------------------------------
-AS5600_ADDR = 0x36
+AS5600_ADD R = 0x36
 RAW_ANGLE_REG = 0x0C
 
 def read_angle():
