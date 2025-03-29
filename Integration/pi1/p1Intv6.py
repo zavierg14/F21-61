@@ -33,13 +33,14 @@ def read_angle():
     data = bus_i2c.read_i2c_block_data(AS5600_ADDR, RAW_ANGLE_REG, 2)
     bus_i2c.close()
     raw_angle = (data[0] << 8) | data[1]
+    raw_angle = raw_angle & 0x0FFF
     angle = (raw_angle / 4096.0) * 360.0
     return angle
 
 # -----------------------------------------
 # CAN Setup 
 # -----------------------------------------
-bus = can.Bus(channel='can0', interface='socketcan', bitrate=500000)
+bus = can.Bus(channel='can0', interface='socketcan', bitrate=1000000)
 
 def send_can_message(can_id, data):
     msg = can.Message(arbitration_id=can_id, data=data, is_extended_id=True)
@@ -88,19 +89,24 @@ def pulse_callback1(channel):
 def pulse_callback2(channel):
     global pulse_count2
     pulse_count2 += 1
+def button_callback(channel):
+    elapsed_time = round(time.perf_counter() - start_time, 6)
+    press_times.append(elapsed_time)
 
 GPIO.setmode(GPIO.BCM)
 #Hall Effect 1
 GPIO.setup(17, GPIO.IN, pull_up_down=GPIO.PUD_OFF)
-GPIO.add_event_detect(17, GPIO.RISING, callback=pulse_callback1, bouncetime=20)
+GPIO.add_event_detect(17, GPIO.RISING, callback=pulse_callback1, bouncetime=10)
 #Hall Effect 2
 GPIO.setup(27, GPIO.IN, pull_up_down=GPIO.PUD_OFF)
-GPIO.add_event_detect(27, GPIO.RISING, callback=pulse_callback2, bouncetime=20)
-#Start switch
+GPIO.add_event_detect(27, GPIO.RISING, callback=pulse_callback2, bouncetime=10)
+#Start Switch
 START_SWITCH_PIN = 22
 GPIO.setup(START_SWITCH_PIN, GPIO.IN)
+#Flag Switch
+GPIO.setup(23, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+GPIO.add_event_detect(23, GPIO.RISING, callback=button_callback, bouncetime=200)
 
-################### SET UP FLAG SWITCH HERE ##################
 
 # -----------------------------------------
 # Sampling Intervals
@@ -140,6 +146,7 @@ try:
         slipData = []
         hall1Data = []
         hall2Data = []
+        press_times = []
 
         start_time = time.perf_counter()
         pot_time = start_time
@@ -160,7 +167,7 @@ try:
 
             if (current_time - steering_time) >= steering_interval:
                 angle = read_angle()
-                steeringData.append([round(current_time - start_time, 6), angle])
+                steeringData.append([round(current_time - start_time, 6), round(angle, 2)])
                 steering_time = current_time
                 
             if (current_time - slip_time) >= slip_interval:
@@ -173,11 +180,16 @@ try:
 
             if (current_time - hall_time) >= hall_interval:
                 elapsed_time = current_time - hall_time
-                pulses = pulse_count - last_pulse_count
-                rot = pulses/16.0
-                frequency_hz = pulses / elapsed_time
-                wheelSpeedData.append([round(current_time - start_time, 6), round(frequency_hz, 2)])
-                last_pulse_count = pulse_count
+                pulses1 = pulse_count1 - last_pulse_count1
+                pulses2 = pulse_count2 - last_pulse_count2
+                rot1 = pulses1/16.0
+                rot2 = pulses2/16.0
+                frequency_hz1 = rot1 / elapsed_time
+                frequency_hz2 = rot2 / elapsed_time
+                hall1Data.append([round(current_time - start_time, 6), round(frequency_hz1, 2)])
+                hall2Data.append([round(current_time - start_time, 6), round(frequency_hz2, 2)])
+                last_pulse_count1 = pulse_count1
+                last_pulse_count2 = pulse_count2
                 hall_time = current_time
 
 
@@ -190,6 +202,12 @@ try:
 			send_can_data(0xA12, data[0], data[1])
 		for data in steeringData:
 			send_can_data(0xB11, data[0], int(data[1]*100))
+        for data in hall1Data:
+			send_can_data(0xC11, data[0], int(data[1]*100))
+        for data in hall2Data:
+			send_can_data(0xC12, data[0], int(data[1]*100))
+		for data in press_times:
+			send_can_message(0x321, int(data[0] * 1e6).to_bytes(4, 'big'))
 		send_can_message(0x123, [0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
         util_func.csvWriteUSB(pot1Data, "P1", ["Time", "Raw Val"])
         util_func.csvWriteUSB(pot2Data, "P2", ["Time", "Raw Val"])
