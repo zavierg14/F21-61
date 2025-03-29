@@ -144,7 +144,7 @@ def stop_callback():
 while True:
 	try:
 		msg = bus.recv()
-		if msg.arbitration_id == 0x123 and msg.data[0] == 1:
+		if msg.arbitration_id == 0xE1 and msg.data[0] == 1:
 			print("Logging Data")
 			# Start GPS & IMU processing
 			gps_queue = multiprocessing.Queue()
@@ -163,12 +163,16 @@ while True:
 			FPot1data = []
 			FPot2data = []
 			MagEncodedata = []
+			FHall1data = []
+			FHall2data = []
+			Rotarydata = []
+			flags = []
 
 			# Meat of recording and printing data
 			while True:				# While loop to continue checking sensors
 				msg = bus.recv(timeout=0)
 				#print(msg, type(msg))
-				if msg != None and msg.arbitration_id == 0x123 and msg.data[0] == 2:
+				if msg != None and msg.arbitration_id == 0xE1 and msg.data[0] == 2:
 					break
 				current = time.perf_counter()		# Check current time
 				if current - last_print >= (1/600.0):
@@ -187,13 +191,21 @@ while True:
 				msg = bus.recv()
 				timestamp, value = util_func.parse_can_data(msg.data)
 #				print(timestamp, value)
-				if msg.arbitration_id == 0xA11:	# Potentiometer
+				if msg.arbitration_id == 0xA1:	# Potentiometer
 					FPot1data.append([timestamp, value])
-				elif msg.arbitration_id == 0xA12:	# Pot 2
+				elif msg.arbitration_id == 0xA2:	# Pot 2
 					FPot2data.append([timestamp, value])
-				elif msg.arbitration_id == 0xB11:	# magnetic encoder
+				elif msg.arbitration_id == 0xB1:	# magnetic encoder
 					MagEncodedata.append([timestamp, value])
-				elif msg.arbitration_id == 0x123 and msg.data[0] == 3:
+				elif msg.arbitration_id == 0xC1:
+					FHall1data.append([timestamp, value])
+				elif msg.arbitration_id == 0xC2:
+					FHall2data.append([timestamp, value])
+				elif msg.arbitration_id == 0xD1:
+					Rotarydata.append([timestamp, value])
+				elif msg.arbitration_id == 0xE2:
+					flags.append([timestamp])
+				elif msg.arbitration_id == 0xE1 and msg.data[0] == 3:
 					print("break")
 					break
 				else:
@@ -201,13 +213,13 @@ while True:
 					print(msg.arbitration_id)
 					print(msg.data[0])
 			FPotdata = [[t1, d1, d2] for (t1, d1), (t2, d2) in zip(FPot1data, FPot2data) if t1 == t2]
-
+			FHalldata = [[t1, d1, d2] for (t1, d1), (t2, d2) in zip(FHall1data, FHall2data) if t1 == t2]
 			print("data finished")
 
 			# Close Devices
 			gps_imu_proc.terminate()
 			gps_imu_proc.join(timeout=1)
-			util_func.stop_callbacks(hall1, hall2)	
+			util_func.stop_callbacks(hall1, hall2)
 
 			# Write to file
 			util_func.csvWriteUSB(GPSdata, "GPS", ["Time", "Lat", "Long", "Alt", "Speed", "Sats"])				# GPS
@@ -216,6 +228,9 @@ while True:
 			util_func.csvWriteUSB(Halldata, "Hall", ["Time", "PulseCounts1", "PulseCounts2"])
 			util_func.csvWriteUSB(FPotdata, "FPot", ["Time", "RawValue1", "RawValue2"])
 			util_func.csvWriteUSB(MagEncodedata, "MagEncode", ["Time", "Data"])
+			util_func.csvWriteUSB(FHalldata, "FHall", ["Time", "Data1", "Data2"])
+			util_func.csvWriteUSB(Rotarydata, "Rotary", ["Time", "Data"])
+			util_func.csvWriteUSB(flags, "Flags", ["Time"])
 			gc.collect
 
 
