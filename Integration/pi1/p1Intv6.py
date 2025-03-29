@@ -57,18 +57,50 @@ def send_can_data(can_id, timestamp, value):
 	val_bytes = value.to_bytes(4, 'big')
 	can_data = time_bytes + val_bytes
 	send_can_message(can_id, can_data)
-	
 
-################### SET UP SLIP SENSOR HERE #########################
+def initialize_slip_sensor():
+    print("Initializing slip sensor...")
+    send_can_message(0x7C0, [0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
+    time.sleep(1)
+    send_can_message(0x7C0, [0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
+    print("Slip sensor calibration complete.")
+    time.sleep(1)
+
+def parse_slip_message(msg):
+    raw = (msg.data[1] << 8) | msg.data[0]
+    if raw == 0x7FFF:
+        return None
+    if raw & 0x8000:
+        raw -= 65536
+    return raw * 0.1
 
 # -----------------------------------------
 # GPIO Setup (Hall Effect Sensor & Switch)
 # -----------------------------------------
+pulse_count1 = 0
+last_pulse_count1 = 0
+pulse_count2 = 0
+last_pulse_count2 = 0
+
+def pulse_callback1(channel):
+    global pulse_count1
+    pulse_count1 += 1
+def pulse_callback2(channel):
+    global pulse_count2
+    pulse_count2 += 1
+
 GPIO.setmode(GPIO.BCM)
-START_SWITCH_PIN = 27
+#Hall Effect 1
+GPIO.setup(17, GPIO.IN, pull_up_down=GPIO.PUD_OFF)
+GPIO.add_event_detect(17, GPIO.RISING, callback=pulse_callback1, bouncetime=20)
+#Hall Effect 2
+GPIO.setup(27, GPIO.IN, pull_up_down=GPIO.PUD_OFF)
+GPIO.add_event_detect(27, GPIO.RISING, callback=pulse_callback2, bouncetime=20)
+#Start switch
+START_SWITCH_PIN = 22
 GPIO.setup(START_SWITCH_PIN, GPIO.IN)
 
-################### SET UP HALL EFFECT SENSORS HERE ##################
+################### SET UP FLAG SWITCH HERE ##################
 
 # -----------------------------------------
 # Sampling Intervals
@@ -78,6 +110,12 @@ pot_interval = 1.0 / pot_rate
 
 steering_rate = 60
 steering_interval = 1.0 / steering_rate
+
+slip_rate = 100
+slip_interval = 1.0 / slip_rate
+
+hall_rate = 10
+hall_interval = 1.0 / hall_rate
 
 
 # -----------------------------------------
@@ -89,6 +127,8 @@ try:
         # Wait for switch to be turned ON
         while GPIO.input(START_SWITCH_PIN) == GPIO.LOW:
             time.sleep(0.05)
+            
+        initialize_slip_sensor()
         send_can_message(0x123, [0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
         time.sleep(1)
         print("Switch ON: Starting data acquisition...")
@@ -97,10 +137,15 @@ try:
         pot1Data = []
         pot2Data = []
         steeringData = []
+        slipData = []
+        hall1Data = []
+        hall2Data = []
 
         start_time = time.perf_counter()
         pot_time = start_time
         steering_time = start_time
+        slip_time = start_time
+        hall_time = start_time
 
         # Acquire data until switch is turned OFF
         while GPIO.input(START_SWITCH_PIN) == GPIO.HIGH:
@@ -117,20 +162,35 @@ try:
                 angle = read_angle()
                 steeringData.append([round(current_time - start_time, 6), angle])
                 steering_time = current_time
+                
+            if (current_time - slip_time) >= slip_interval:
+                msg = bus.recv(timeout=0)
+                if msg and msg.arbitration_id == 0x2B0:
+                    parsed_angle = parse_slip_message(msg)
+                    if parsed_angle is not None:
+                        slipData.append([round(current_time - start_time, 6), round(parsed_angle, 1)])
+                slip_time = current_time
+
+            if (current_time - hall_time) >= hall_interval:
+                elapsed_time = current_time - hall_time
+                pulses = pulse_count - last_pulse_count
+                rot = pulses/16.0
+                frequency_hz = pulses / elapsed_time
+                wheelSpeedData.append([round(current_time - start_time, 6), round(frequency_hz, 2)])
+                last_pulse_count = pulse_count
+                hall_time = current_time
+
 
         print("Switch OFF: Stopping and writing CSV logs...")
         send_can_message(0x123, [0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
         time.sleep(1)
         for data in pot1Data:
-            send_can_data(0xA11, data[0], data[1])
-            time.sleep(0.001)
-        for data in pot2Data:
-            send_can_data(0xA12, data[0], data[1])
-            time.sleep(0.001)
-        for data in steeringData:
-            send_can_data(0xB11, data[0], int(data[1]*100))
-            time.sleep(0.001)
-        send_can_message(0x123, [0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
+			send_can_data(0xA11, data[0], data[1])
+		for data in pot2Data:
+			send_can_data(0xA12, data[0], data[1])
+		for data in steeringData:
+			send_can_data(0xB11, data[0], int(data[1]*100))
+		send_can_message(0x123, [0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
         util_func.csvWriteUSB(pot1Data, "P1", ["Time", "Raw Val"])
         util_func.csvWriteUSB(pot2Data, "P2", ["Time", "Raw Val"])
         util_func.csvWriteUSB(steeringData, "Steering", ["Time", "Angle"])
@@ -139,5 +199,5 @@ try:
 except KeyboardInterrupt:
     print("\nKeyboard interrupt received. Cleaning up GPIO...")
     GPIO.cleanup()
-    bus.shutdown()
     print("Done.")
+
