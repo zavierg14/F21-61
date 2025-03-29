@@ -68,7 +68,7 @@ pot_channel2 = AnalogIn(adc, ADS.P1)	# Initialize channel 2 in Single-Ended Mode
 last_print = time.perf_counter()	# Start time for sampling
 can_update = last_print
 gc.disable()
-bus = can.Bus(channel='can0', interface='socketcan', bitrate=500000)
+bus = can.Bus(channel='can0', interface='socketcan', bitrate=1000000)
 
 #####################
 # --- Functions --- #
@@ -182,6 +182,7 @@ while True:
 				while not imu_queue.empty():
 					IMUdata.append(imu_queue.get())
 			# Can Recieve
+			print("Begin Receive")
 			while True:
 				msg = bus.recv()
 				timestamp, value = util_func.parse_can_data(msg.data)
