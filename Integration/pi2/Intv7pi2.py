@@ -11,7 +11,7 @@ import dependencies.chs.lib.device_model as deviceModel	# Actual local file w th
 import dependencies.chs.JY901S as JY			# WitMotion's actual file that I'm stealing functions from :)
 from dependencies.chs.lib.data_processor.roles.jy901s_dataProcessor import JY901SDataProcessor	# WitMotion file to help w data parsing i think
 from dependencies.chs.lib.protocol_resolver.roles.wit_protocol_resolver import WitProtocolResolver	# ^^^^^
-import dependencies.util_func as util_func	# My file :^) this is super useful
+import dependencies.util_funcv2 as util_func	# My file :^) this is super useful
 import board
 import busio
 import adafruit_ads1x15.ads1015 as ADS

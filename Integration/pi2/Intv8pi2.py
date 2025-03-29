@@ -15,7 +15,7 @@ import dependencies.chs.lib.device_model as deviceModel	# Actual local file w th
 import dependencies.chs.JY901S as JY			# WitMotion's actual file that I'm stealing functions from :)
 from dependencies.chs.lib.data_processor.roles.jy901s_dataProcessor import JY901SDataProcessor	# WitMotion file to help w data parsing i think
 from dependencies.chs.lib.protocol_resolver.roles.wit_protocol_resolver import WitProtocolResolver	# ^^^^^
-import dependencies.util_func as util_func	# My file :^) this is super useful
+import dependencies.util_funcv2 as util_func	# My file :^) this is super useful
 import board
 import busio
 import adafruit_ads1x15.ads1015 as ADS
@@ -66,8 +66,9 @@ pot_channel2 = AnalogIn(adc, ADS.P1)	# Initialize channel 2 in Single-Ended Mode
 
 # Housekeeping before recording data
 last_print = time.perf_counter()	# Start time for sampling
+can_update = last_print
 gc.disable()
-bus = can.Bus(channel='can0', bustype='socketcan', bitrate=500000)
+bus = can.Bus(channel='can0', interface='socketcan', bitrate=500000)
 
 #####################
 # --- Functions --- #
@@ -132,7 +133,7 @@ def imu_gps_process(gps_queue, imu_queue):
 			gps_queue.put(gps_data)
 			imu_queue.put(imu_data)
 
-def stop_callbacks():
+def stop_callback():
 	global hall1, hall2
 	hall1.cancel()
 	hall2.cancel()
@@ -141,21 +142,34 @@ def stop_callbacks():
 # --- Data Aquisition --- #
 ###########################
 while True:
-	msg = can.recv()
-	if msg == 0x01:
-		# Start GPS & IMU processing
-		gps_queue = multiprocessing.Queue()
-		imu_queue = multiprocessing.Queue()
-		gps_imu_proc = multiprocessing.Process(target=imu_gps_process, args=(gps_queue, imu_queue), daemon=True)
-		gps_imu_proc.start()
+	try:
+		msg = bus.recv()
+		if msg.arbitration_id == 0x123 and msg.data[0] == 1:
+			print("Logging Data")
+			# Start GPS & IMU processing
+			gps_queue = multiprocessing.Queue()
+			imu_queue = multiprocessing.Queue()
+			gps_imu_proc = multiprocessing.Process(target=imu_gps_process, args=(gps_queue, imu_queue), daemon=True)
+			gps_imu_proc.start()
 
-		# Start hall Effects
-		hall1 = lgpio.callback(h, PIN1, lgpio.RISING_EDGE, pulse_callback)
-		hall2 = lgpio.callback(h, PIN2, lgpio.RISING_EDGE, pulse_callback)
+			# Start hall Effects
+			hall1 = lgpio.callback(h, PIN1, lgpio.RISING_EDGE, pulse_callback)
+			hall2 = lgpio.callback(h, PIN2, lgpio.RISING_EDGE, pulse_callback)
 
-		# Meat of recording and printing data
-		try:							# Try & except to give a way of ending loop someday 
-			while msg == 0x02:				# While loop to continue checking sensors
+			GPSdata = []
+			IMUdata = []
+			Potdata = []
+			Halldata = []
+			FPot1data = []
+			FPot2data = []
+			MagEncodedata = []
+
+			# Meat of recording and printing data
+			while True:				# While loop to continue checking sensors
+				msg = bus.recv(timeout=0)
+				#print(msg, type(msg))
+				if msg != None and msg.arbitration_id == 0x123 and msg.data[0] == 2:
+					break
 				current = time.perf_counter()		# Check current time
 				if current - last_print >= (1/600.0):
 					raw_value1 = max(0, pot_channel1.value)	# Read ADC Values
@@ -164,25 +178,48 @@ while True:
 					last_print=current
 				while not gps_queue.empty():
 					GPSdata.append(gps_queue.get())
+#					print(GPSdata)
 				while not imu_queue.empty():
 					IMUdata.append(imu_queue.get())
-				if current - can_update >= (1/10):
-					msg = can.recv()
-		except msg == 0x02:	# Ctrl+C sends keyboard interupt and stops loop
-			pass			# Does literally nothing but stop python from whining
+			# Can Recieve
+			while True:
+				msg = bus.recv()
+				timestamp, value = util_func.parse_can_data(msg.data)
+#				print(timestamp, value)
+				if msg.arbitration_id == 0xA11:	# Potentiometer
+					FPot1data.append([timestamp, value])
+				elif msg.arbitration_id == 0xA12:	# Pot 2
+					FPot2data.append([timestamp, value])
+				elif msg.arbitration_id == 0xB11:	# magnetic encoder
+					MagEncodedata.append([timestamp, value])
+				elif msg.arbitration_id == 0x123 and msg.data[0] == 3:
+					print("break")
+					break
+				else:
+					print("Broked")
+					print(msg.arbitration_id)
+					print(msg.data[0])
+			FPotdata = [[t1, d1, d2] for (t1, d1), (t2, d2) in zip(FPot1data, FPot2data) if t1 == t2]
 
-		# Close Devices
-		gps_imu_proc.terminate()
-		gps_imu_proc.join(timeout=1)
-		stop_callbacks()
+			print("data finished")
 
-		# Write to file
-		util_func.csvWriteUSB(GPSdata, "GPS", ["Time", "Lat", "Long", "Alt", "Speed", "Sats"])				# GPS
-		util_func.csvWriteUSB(IMUdata, "IMU", ["Time", "AccX", "AccY", "AccZ", "AngleX", "AngleY", "AngleZ"])		# IMU
-		util_func.csvWriteUSB(Potdata, "Pot", ["Time", "RawValue1", "RawValue2"])
-		util_func.csvWriteUSB(Halldata, "Hall", ["Time", "PulseCounts1", "PulseCounts2"])
-		gc.collect
+			# Close Devices
+			gps_imu_proc.terminate()
+			gps_imu_proc.join(timeout=1)
+			util_func.stop_callbacks(hall1, hall2)	
 
+			# Write to file
+			util_func.csvWriteUSB(GPSdata, "GPS", ["Time", "Lat", "Long", "Alt", "Speed", "Sats"])				# GPS
+			util_func.csvWriteUSB(IMUdata, "IMU", ["Time", "AccX", "AccY", "AccZ", "AngleX", "AngleY", "AngleZ"])		# IMU
+			util_func.csvWriteUSB(Potdata, "RPot", ["Time", "RawValue1", "RawValue2"])
+			util_func.csvWriteUSB(Halldata, "Hall", ["Time", "PulseCounts1", "PulseCounts2"])
+			util_func.csvWriteUSB(FPotdata, "FPot", ["Time", "RawValue1", "RawValue2"])
+			util_func.csvWriteUSB(MagEncodedata, "MagEncode", ["Time", "Data"])
+			gc.collect
+
+
+	except KeyboardInterrupt:
+		break
 #################################
 # --- End of Script Cleanup --- #
 #################################
