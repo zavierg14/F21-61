@@ -135,7 +135,7 @@ try:
             time.sleep(0.05)
             
         initialize_slip_sensor()
-        send_can_message(0x123, [0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
+        send_can_message(0xE1, [0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
         time.sleep(1)
         print("Switch ON: Starting data acquisition...")
 
@@ -194,21 +194,23 @@ try:
 
 
         print("Switch OFF: Stopping and writing CSV logs...")
-        send_can_message(0x123, [0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
+        send_can_message(0xE1, [0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
         time.sleep(1)
         for data in pot1Data:
-			send_can_data(0xA11, data[0], data[1])
+			send_can_data(0xA1, data[0], data[1])
 		for data in pot2Data:
-			send_can_data(0xA12, data[0], data[1])
+			send_can_data(0xA2, data[0], data[1])
 		for data in steeringData:
-			send_can_data(0xB11, data[0], int(data[1]*100))
+			send_can_data(0xB1, data[0], int(data[1]*100))
         for data in hall1Data:
-			send_can_data(0xC11, data[0], int(data[1]*100))
+			send_can_data(0xC1, data[0], int(data[1]*100))
         for data in hall2Data:
-			send_can_data(0xC12, data[0], int(data[1]*100))
+			send_can_data(0xC2, data[0], int(data[1]*100))
+        for data in slipData:
+			send_can_data(0xD1, data[0], int(data[1]*10))
 		for data in press_times:
-			send_can_message(0x321, int(data[0] * 1e6).to_bytes(4, 'big'))
-		send_can_message(0x123, [0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
+			send_can_message(0xE2, int(data[0] * 1e6).to_bytes(4, 'big'))
+		send_can_message(0xE1, [0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
         util_func.csvWriteUSB(pot1Data, "P1", ["Time", "Raw Val"])
         util_func.csvWriteUSB(pot2Data, "P2", ["Time", "Raw Val"])
         util_func.csvWriteUSB(steeringData, "Steering", ["Time", "Angle"])
