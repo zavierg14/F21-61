@@ -1,12 +1,10 @@
-#! ~/env/bin/python3
-# Kaleb Binger 2/2025
-# F21-61 - Swap Hudson
-# v8: Optimizing for switch
+# Kaleb Binger 3/2025
+# F24-61 - Swap Hudson
+# v8: CAN integration
 
-#############################
-# --- Required Packages --- #
-#############################
-
+# -----------------------------------------
+# Required Packages
+# -----------------------------------------
 import serial			# Serial to mess w sensors
 import time			# Lets us check what time it is
 import adafruit_gps		# Tells what the GPS is thinking
@@ -25,9 +23,9 @@ import lgpio
 import gc
 import can
 
-#########################
-# --- Configuration --- #
-#########################
+# -----------------------------------------
+# Configuration
+# -----------------------------------------
 
 # Sampling Frequency Setup
 slow_sampling_freq = 10 #Hz (GPS & IMU sampling rate)
@@ -36,12 +34,6 @@ ADSsampling_freq = 3300 #Hz (ADS1015 sampling rate)
 ADSinterval = 1/ADSsampling_freq #s ADS interval
 pulse_count1 = 0
 pulse_count2 = 0
-
-# Data Storage
-GPSdata = []
-IMUdata = []
-Potdata = []
-Halldata = []
 
 # Configure Hall Effect
 CHIP = 0
