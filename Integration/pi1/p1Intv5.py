@@ -43,7 +43,7 @@ def read_angle():
 bus = can.Bus(channel='can0', interface='socketcan', bitrate=1000000)
 
 def send_can_message(can_id, data):
-    msg = can.Message(arbitration_id=can_id, data=data, is_extended_id=True)
+    msg = can.Message(arbitration_id=can_id, data=data, is_extended_id=False)
     success = False
     while not success:
         try:
@@ -90,7 +90,7 @@ try:
         # Wait for switch to be turned ON
         while GPIO.input(START_SWITCH_PIN) == GPIO.LOW:
             time.sleep(0.05)
-        send_can_message(0x123, [0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
+        send_can_message(0xE1, [0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
         time.sleep(1)
         print("Switch ON: Starting data acquisition...")
 
@@ -116,23 +116,24 @@ try:
 
             if (current_time - steering_time) >= steering_interval:
                 angle = read_angle()
-                steeringData.append([round(current_time - start_time, 6), angle])
+                steeringData.append([round(current_time - start_time, 6), round(angle, 2)])
                 steering_time = current_time
 
         print("Switch OFF: Stopping and writing CSV logs...")
-        send_can_message(0x123, [0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
+        send_can_message(0xE1, [0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
         time.sleep(1)
         for data in pot1Data:
-            send_can_data(0xA11, data[0], data[1])
+            send_can_data(0xA1, data[0], data[1])
             time.sleep(0.0002)
         for data in pot2Data:
-            send_can_data(0xA12, data[0], data[1])
+            send_can_data(0xA2, data[0], data[1])
             time.sleep(0.0002)
         for data in steeringData:
-            send_can_data(0xB11, data[0], int(data[1]*100))
+            send_can_data(0xB1, data[0], int(data[1]*100))
             time.sleep(0.0002)
-        send_can_message(0x123, [0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
+        send_can_message(0xE1, [0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
         util_func.csvWriteUSB(pot1Data, "P1", ["Time", "Raw Val"])
+        print("length: ",len(pot1Data))
         util_func.csvWriteUSB(pot2Data, "P2", ["Time", "Raw Val"])
         util_func.csvWriteUSB(steeringData, "Steering", ["Time", "Angle"])
 
