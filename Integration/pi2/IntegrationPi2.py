@@ -23,13 +23,15 @@ import gc												# Garbage collect for memory handling
 import can												# CAN for communication with other pi
 
 # -----------------------------------------
-# Sampling Frequency Setup
+# Configuration
 # -----------------------------------------
-slow_sampling_freq = 10 #Hz 		GPS & IMU sampling rate
-interval = 1/slow_sampling_freq #s 	GPS & IMU interval
-ADSinterval = 1/3300 #s 		ADS interval
-pulse_count1 = 0			# Pulse counter 1 for hall effect
-pulse_count2 = 0			# Pulse counter 2 for hall effect
+slow_sampling_freq = 10 #Hz 						GPS & IMU sampling rate
+interval = 1/slow_sampling_freq #s 					GPS & IMU interval
+ADSinterval = 1/3300 #s 						ADS interval
+last_print = time.perf_counter()					# Start time for sampling
+can_update = last_print							# Start time for CAN
+gc.disable()								# Disable python memory collect
+bus = can.Bus(channel='can0', interface='socketcan', bitrate=1000000)	# Turn on CAN
 
 # -----------------------------------------
 # ADS1015 Setup
@@ -58,29 +60,34 @@ lgpio.gpio_claim_alert(h, PIN1, lgpio.RISING_EDGE)	# Set up alert for rising edg
 lgpio.gpio_claim_input(h, PIN2)				# Configure PIN2 as input
 lgpio.gpio_claim_alert(h, PIN2, lgpio.RISING_EDGE)	# Set up alert for rising edge detection
 
+pulse_count1 = 0					# Pulse counter 1 for hall effect
+pulse_count2 = 0					# Pulse counter 2 for hall effect
 
-# Housekeeping before recording data
-last_print = time.perf_counter()	# Start time for sampling
-can_update = last_print
-gc.disable()
-bus = can.Bus(channel='can0', interface='socketcan', bitrate=1000000)
-
-# -----------------------------------------
-# Functions
-# -----------------------------------------
 def pulse_callback(chip, gpio, level, timestamp):
 	'''
 	callback function that gets called on the rising edge of the hall sensor output.
 	increments pulse counter
 	'''
-	global pulse_count1,pulse_count2, Halldata
-	if level == 1:
-		if gpio == PIN1:
-			pulse_count1 +=1
-			Halldata.append([time.perf_counter(), pulse_count1, pulse_count2])
-		elif gpio == PIN2:
-			pulse_count2 += 1
-			Halldata.append([time.perf_counter(), pulse_count1, pulse_count2])
+	global pulse_count1, pulse_count2, Halldata						# Import external variables
+	if level == 1:										# IF the signal is HIGH
+		if gpio == PIN1:								# IF pin is 1
+			pulse_count1 +=1							# Increment counter 1
+			Halldata.append([time.perf_counter(), pulse_count1, pulse_count2])	# Append to data list
+		elif gpio == PIN2:								# IF pin is 2
+			pulse_count2 += 1							# Increment counter 2
+			Halldata.append([time.perf_counter(), pulse_count1, pulse_count2])	# Append to data list
+
+def stop_callback():
+	'''
+ 	stop callbacks between switch flips
+  	'''
+	global hall1, hall2	# Import global hall variable
+	hall1.cancel()		# Cancel hall1 callback
+	hall2.cancel()		# Cancel hall2 callback
+
+# -----------------------------------------
+# GPS and IMU Collection
+# -----------------------------------------
 
 def imu_gps_process(gps_queue, imu_queue):
 	'''
@@ -88,144 +95,152 @@ def imu_gps_process(gps_queue, imu_queue):
 	other sampling
 	'''
 	# Initialize GPS
-	GPSserial_port = '/dev/ttyUSB0'
-	GPSbaud_rate = 115200
-	GPSser = serial.Serial(GPSserial_port, GPSbaud_rate, timeout = .1)
-	gps = adafruit_gps.GPS(GPSser, debug = False)
+	global interval								# GPS and IMU interval time
+	GPSserial_port = '/dev/ttyUSB0'						# GPS port USB
+	GPSbaud_rate = 115200							# GPS baud rate
+	GPSser = serial.Serial(GPSserial_port, GPSbaud_rate, timeout = .1)	# GPS serial object
+	gps = adafruit_gps.GPS(GPSser, debug = False)				# GPS parsing object
 
 	# Configure GPS
 	gps.send_command(b"PMTK314,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0")	# See adafruit documentation, telling GPS what data we want
-	gps.send_command(b'PMTK220,100')						# See adafruit documentation, telling GPS how fast we want to update date
+	gps.send_command(b'PMTK220,100')						# See adafruit documentation, telling GPS how fast we want to update data
 
 	# Initialize IMU
-	device = deviceModel.DeviceModel("IMU",WitProtocolResolver(),JY901SDataProcessor(),"51_0")	# WitMotion libraries, make device object
-	device.serialConfig.portName = '/dev/ttyAMA0'   						# Set serial port
-	device.serialConfig.baud = 9600                 					# Set baud rate
+	device = deviceModel.DeviceModel("IMU",WitProtocolResolver(),JY901SDataProcessor(),"51_0")	# WitMotion libraries, make IMU device object
+	device.serialConfig.portName = '/dev/ttyAMA0'   						# IMU serial port
+	device.serialConfig.baud = 9600                 						# IMU baud rate
 	device.openDevice()                                 						# Open serial port
 
-	last_update = time.perf_counter()
-	GPSdata_local = []
-	IMUdata_local = []
+	last_update = time.perf_counter()	# Start time for GPS
 
-	while True:
-		current_time = time.perf_counter()
-		if current_time - last_update >= interval:
-			last_update = current_time
+	# Loop through data collection 
+	while True:	# Infinite loop!
+		current_time = time.perf_counter()		# Variable for time now
+		if current_time - last_update >= interval:	# IF time since last updat is greater than sampling interval
+			last_update = current_time		# Set last update to now
 
 			# Read GPS data
-			gps.update()
-			gps_data = [current_time, gps.latitude, gps.longitude, gps.altitude_m, gps.speed_kmh, gps.satellites]
+			gps.update()							# Update GPS data
+			gps_data = [current_time, gps.latitude, gps.longitude, 		# Retrieve GPS data
+				    gps.altitude_m, gps.speed_kmh, gps.satellites]
 			# Read IMU data
-			imu_data = [current_time,
+			imu_data = [current_time,					# Retrieve IMU data
 				device.getDeviceData("accX"),
 				device.getDeviceData("accY"),
 				device.getDeviceData("accZ"),
 				device.getDeviceData("angleX"),
 				device.getDeviceData("angleY"),
 				device.getDeviceData("angleZ")]
+			
 			# Put data into queues
-			gps_queue.put(gps_data)
-			imu_queue.put(imu_data)
+			gps_queue.put(gps_data)		# GPS queue to get out of process
+			imu_queue.put(imu_data)		# IMU queue to get out of process
 
-def stop_callback():
-	global hall1, hall2
-	hall1.cancel()
-	hall2.cancel()
 
-###########################
-# --- Data Aquisition --- #
-###########################
-while True:
-	try:
-		msg = bus.recv()
-		if msg.arbitration_id == 0xE1 and msg.data[0] == 1:
-			print("Logging Data")
+# -----------------------------------------
+# MAIN
+# -----------------------------------------
+while True:	# Infinite loop for data acquisition
+	try:	# Try to ensure an error doesn't break everything
+		msg = bus.recv()	# CAN recieve
+		if msg.arbitration_id == 0xE1 and msg.data[0] == 1:	# IF CAN ID is 0xE1 (power switch) and command is 1 (ON)
+			print("Logging Data")				# Print logging data
+			
 			# Start GPS & IMU processing
-			gps_queue = multiprocessing.Queue()
-			imu_queue = multiprocessing.Queue()
-			gps_imu_proc = multiprocessing.Process(target=imu_gps_process, args=(gps_queue, imu_queue), daemon=True)
-			gps_imu_proc.start()
+			gps_queue = multiprocessing.Queue()										# Start GPS queue
+			imu_queue = multiprocessing.Queue()										# Start IMU queue
+			gps_imu_proc = multiprocessing.Process(target=imu_gps_process, args=(gps_queue, imu_queue), daemon=True)	# Create seperate process
+			gps_imu_proc.start()												# Start process
 
 			# Start hall Effects
-			hall1 = lgpio.callback(h, PIN1, lgpio.RISING_EDGE, pulse_callback)
-			hall2 = lgpio.callback(h, PIN2, lgpio.RISING_EDGE, pulse_callback)
+			hall1 = lgpio.callback(h, PIN1, lgpio.RISING_EDGE, pulse_callback)	# Turn on hall 1 collection
+			hall2 = lgpio.callback(h, PIN2, lgpio.RISING_EDGE, pulse_callback)	# Turn on hall 2 collection
 
-			GPSdata = []
-			IMUdata = []
-			Potdata = []
-			Halldata = []
-			FPot1data = []
-			FPot2data = []
-			MagEncodedata = []
-			FHall1data = []
-			FHall2data = []
-			Rotarydata = []
-			flags = []
+			# Data Storage
+			GPSdata = []		# GPS
+			IMUdata = []		# IMU
+			Potdata = []		# Rear Potentiometers
+			Halldata = []		# Rear Hall Effects
+			FPot1data = []		# Front Potentiometer 1
+			FPot2data = []		# Front Potentiometer 2
+			MagEncodedata = []	# Magnetic Encoder
+			FHall1data = []		# Front Hall 1
+			FHall2data = []		# Front Hall 2
+			Rotarydata = []		# Rotary Encoder
+			flags = []		# Flags
 
 			# Meat of recording and printing data
-			while True:				# While loop to continue checking sensors
-				msg = bus.recv(timeout=0)
-				#print(msg, type(msg))
-				if msg != None and msg.arbitration_id == 0xE1 and msg.data[0] == 2:
-					break
-				current = time.perf_counter()		# Check current time
-				if current - last_print >= (1/600.0):
-					raw_value1 = max(0, pot_channel1.value)	# Read ADC Values
-					raw_value2 = max(0, pot_channel2.value)
-					Potdata.append([current, raw_value1, raw_value2])
-					last_print=current
-				while not gps_queue.empty():
-					GPSdata.append(gps_queue.get())
-#					print(GPSdata)
-				while not imu_queue.empty():
-					IMUdata.append(imu_queue.get())
-			# Can Recieve
-			print("Begin Receive")
-			while True:
-				msg = bus.recv()
-				timestamp, value = util_func.parse_can_data(msg.data)
-#				print(timestamp, value)
-				if msg.arbitration_id == 0xA1:	# Potentiometer
-					FPot1data.append([timestamp, value])
-				elif msg.arbitration_id == 0xA2:	# Pot 2
-					FPot2data.append([timestamp, value])
-				elif msg.arbitration_id == 0xB1:	# magnetic encoder
-					MagEncodedata.append([timestamp, value])
-				elif msg.arbitration_id == 0xC1:
-					FHall1data.append([timestamp, value])
-				elif msg.arbitration_id == 0xC2:
-					FHall2data.append([timestamp, value])
-				elif msg.arbitration_id == 0xD1:
-					Rotarydata.append([timestamp, value])
-				elif msg.arbitration_id == 0xE2:
-					flags.append([timestamp])
-				elif msg.arbitration_id == 0xE1 and msg.data[0] == 3:
-					print("break")
-					break
-				else:
-					print("Broked")
-					print(msg.arbitration_id)
-					print(msg.data[0])
-			FPotdata = [[t1, d1, d2] for (t1, d1), (t2, d2) in zip(FPot1data, FPot2data) if t1 == t2]
-			FHalldata = [[t1, d1, d2] for (t1, d1), (t2, d2) in zip(FHall1data, FHall2data) if t1 == t2]
-			print("data finished")
+			while True:					# While loop to continually check sensors
+				msg = bus.recv(timeout=0)		# Check CAN
+				if msg != None and msg.arbitration_id == 0xE1 and msg.data[0] == 2:	# IF CAN ID is 0xE1 (power switch) and command is 2 (OFF)
+					break								# Break loop, end data recording
+				current = time.perf_counter()					# Check current time
+				if current - last_print >= (1/600.0):				# Sample at 600Hz
+					raw_value1 = max(0, pot_channel1.value)			# Read ADC1 Values
+					raw_value2 = max(0, pot_channel2.value)			# Read ADC2 Values
+					Potdata.append([current, raw_value1, raw_value2])	# Append potentiometer data
+					last_print=current					# Set last print to now	
+				while not gps_queue.empty():			# IF GPS queue has data
+					GPSdata.append(gps_queue.get())		# Append data to GPS data
+				while not imu_queue.empty():			# IF IMU queue has data
+					IMUdata.append(imu_queue.get())		# Append data to IMU data
+					
+			# Recieve Front Pi (Pi 1) data after recording
+			print("Begin Receive")						# Print Recieve begin
+			while True:							# Infinite loop
+				msg = bus.recv()					# Recieve CAN data
+				timestamp, value = util_func.parse_can_data(msg.data)	# Put can data through parsing function - see util_funcv2
+				
+				# Front Potentiometer 1
+				if msg.arbitration_id == 0xA1:			# IF CAN ID is 0xA1 (Potentiometer 1)
+					FPot1data.append([timestamp, value])	# Append time and data to Front Potentiometer 1 data
+				# Front Potentiometer 2
+				elif msg.arbitration_id == 0xA2:		# IF CAN ID is 0xA2 (Potentiometer 2)
+					FPot2data.append([timestamp, value])	# Append time and data to Front Potentiometer 2 data
+				# Magnetic Encoder
+				elif msg.arbitration_id == 0xB1:		# IF CAN ID is 0xB1 (Magnetic Encoder)
+					MagEncodedata.append([timestamp, value])# Append time and data to Magnetic Encoder data
+				# Front Hall Effect 1
+				elif msg.arbitration_id == 0xC1:		# IF CAN ID is 0xC1 (Hall 1 )
+					FHall1data.append([timestamp, value])	# Append time and data to Hall Effect 1 data
+				# Front Hall Effect 2
+				elif msg.arbitration_id == 0xC2:		# IF CAN ID is 0xC2 (Hall 2)
+					FHall2data.append([timestamp, value])	# Append time and data to Hall Effect 2 data
+				# Rotary Encoder
+				elif msg.arbitration_id == 0xD1:		# IF CAN ID is 0xD1 (Rotary Encoder)
+					Rotarydata.append([timestamp, value])	# Append time and data to Rotary Encoder data
+				# Flags
+				elif msg.arbitration_id == 0xE2:		# IF CAN ID is 0xE2 (Flags)
+					flags.append([timestamp])		# Append time to flags data
+				# Switch
+				elif msg.arbitration_id == 0xE1 and msg.data[0] == 3:	# IF CAN ID is 0xE1 (Switch)
+					print("break")					# Print break
+					break						# Break loop
+				else:					# Catch all if something breaks
+					print("Broked")			# You should never see this print
+					print(msg.arbitration_id)	# If you do it's all jacked up
+					print(msg.data[0])		# Call/text me - 7206439097
+					
+			FPotdata = [[t1, d1, d2] for (t1, d1), (t2, d2) in zip(FPot1data, FPot2data) if t1 == t2]	# Combine Front Potentiometers into one list
+			FHalldata = [[t1, d1, d2] for (t1, d1), (t2, d2) in zip(FHall1data, FHall2data) if t1 == t2]	# Combine Front Halls into one list
+			print("data finished")	# We done
 
 			# Close Devices
-			gps_imu_proc.terminate()
-			gps_imu_proc.join(timeout=1)
-			util_func.stop_callbacks(hall1, hall2)
+			gps_imu_proc.terminate()		# Kill seperate process
+			gps_imu_proc.join(timeout=1)		# Wait for it to join
+			util_func.stop_callbacks(hall1, hall2)	# Stop hall effects
 
 			# Write to file
-			util_func.csvWriteUSB(GPSdata, "GPS", ["Time", "Lat", "Long", "Alt", "Speed", "Sats"])				# GPS
-			util_func.csvWriteUSB(IMUdata, "IMU", ["Time", "AccX", "AccY", "AccZ", "AngleX", "AngleY", "AngleZ"])		# IMU
-			util_func.csvWriteUSB(Potdata, "RPot", ["Time", "RawValue1", "RawValue2"])
-			util_func.csvWriteUSB(Halldata, "Hall", ["Time", "PulseCounts1", "PulseCounts2"])
-			util_func.csvWriteUSB(FPotdata, "FPot", ["Time", "RawValue1", "RawValue2"])
-			util_func.csvWriteUSB(MagEncodedata, "MagEncode", ["Time", "Data"])
-			util_func.csvWriteUSB(FHalldata, "FHall", ["Time", "Data1", "Data2"])
-			util_func.csvWriteUSB(Rotarydata, "Rotary", ["Time", "Data"])
-			util_func.csvWriteUSB(flags, "Flags", ["Time"])
-			gc.collect
+			util_func.csvWriteUSB(GPSdata, "GPS", ["Time", "Lat", "Long", "Alt", "Speed", "Sats"])			# GPS
+			util_func.csvWriteUSB(IMUdata, "IMU", ["Time", "AccX", "AccY", "AccZ", "AngleX", "AngleY", "AngleZ"])	# IMU
+			util_func.csvWriteUSB(Potdata, "RPot", ["Time", "RawValue1", "RawValue2"])				# Rear Pots
+			util_func.csvWriteUSB(Halldata, "Hall", ["Time", "PulseCounts1", "PulseCounts2"])			# Rear Halls
+			util_func.csvWriteUSB(FPotdata, "FPot", ["Time", "RawValue1", "RawValue2"])				# Front Pots
+			util_func.csvWriteUSB(MagEncodedata, "MagEncode", ["Time", "Data"])					# Magnetic Encoder (Steering)
+			util_func.csvWriteUSB(FHalldata, "FHall", ["Time", "Data1", "Data2"])					# Front Halls
+			util_func.csvWriteUSB(Rotarydata, "Rotary", ["Time", "Data"])						# Rotary Encoder (5th wheel)
+			util_func.csvWriteUSB(flags, "Flags", ["Time"])								# Flags
+			gc.collect												# Take out the trash
 
 
 	except KeyboardInterrupt:
