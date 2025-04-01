@@ -116,7 +116,7 @@ def imu_gps_process(gps_queue, imu_queue):
 	# Loop through data collection 
 	while True:	# Infinite loop!
 		current_time = time.perf_counter()		# Variable for time now
-		if current_time - last_update >= interval:	# IF time since last updat is greater than sampling interval
+		if current_time - last_update >= interval:	# IF time since last update is greater than sampling interval
 			last_update = current_time		# Set last update to now
 
 			# Read GPS data
@@ -130,7 +130,13 @@ def imu_gps_process(gps_queue, imu_queue):
 				device.getDeviceData("accZ"),
 				device.getDeviceData("angleX"),
 				device.getDeviceData("angleY"),
-				device.getDeviceData("angleZ")]
+				device.getDeviceData("angleZ"),
+				device.getDeviceData("gyroX"), 
+				device.getDeviceData("gyroY"),
+				device.getDeviceData("gyroZ"),
+				device.getDeviceData("magX"),
+				device.getDeviceData("magY"),
+				device.getDeviceData("magZ")]
 			
 			# Put data into queues
 			gps_queue.put(gps_data)		# GPS queue to get out of process
