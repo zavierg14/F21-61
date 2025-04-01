@@ -245,10 +245,11 @@ while True:	# Infinite loop for data acquisition
 
 	except KeyboardInterrupt:
 		break
-#################################
-# --- End of Script Cleanup --- #
-#################################
 
+# -----------------------------------------
+# End of Script Cleanup
+# -----------------------------------------
+#this shouldnt actually ever run but playing it safe ya know
 bus.shutdown()
 lgpio.gpiochip_close(h)
 gc.collect()
