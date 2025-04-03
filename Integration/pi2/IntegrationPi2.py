@@ -51,7 +51,7 @@ pot_channel2 = AnalogIn(adc, ADS.P1)			# Initialize channel 2 in Single-Ended Mo
 # -----------------------------------------
 CHIP = 0						# GPIO chip being used
 PIN1 = 17						# GPIO PIN1
-PIN2 = 27						# GPIO Pin2 
+PIN2 = 27						# GPIO Pin2
 h = lgpio.gpiochip_open(CHIP)				# Open the GPIO chip
 
 lgpio.gpio_claim_input(h, PIN1)				# Configure PIN1 as input
@@ -113,7 +113,7 @@ def imu_gps_process(gps_queue, imu_queue):
 
 	last_update = time.perf_counter()	# Start time for GPS
 
-	# Loop through data collection 
+	# Loop through data collection
 	while True:	# Infinite loop!
 		current_time = time.perf_counter()		# Variable for time now
 		if current_time - last_update >= interval:	# IF time since last update is greater than sampling interval
@@ -137,7 +137,7 @@ def imu_gps_process(gps_queue, imu_queue):
 				device.getDeviceData("magX"),
 				device.getDeviceData("magY"),
 				device.getDeviceData("magZ")]
-			
+
 			# Put data into queues
 			gps_queue.put(gps_data)		# GPS queue to get out of process
 			imu_queue.put(imu_data)		# IMU queue to get out of process
@@ -151,7 +151,7 @@ while True:	# Infinite loop for data acquisition
 		msg = bus.recv()	# CAN recieve
 		if msg.arbitration_id == 0xE1 and msg.data[0] == 1:	# IF CAN ID is 0xE1 (power switch) and command is 1 (ON)
 			print("Logging Data")				# Print logging data
-			
+
 			# Start GPS & IMU processing
 			gps_queue = multiprocessing.Queue()										# Start GPS queue
 			imu_queue = multiprocessing.Queue()										# Start IMU queue
@@ -190,13 +190,13 @@ while True:	# Infinite loop for data acquisition
 					GPSdata.append(gps_queue.get())		# Append data to GPS data
 				while not imu_queue.empty():			# IF IMU queue has data
 					IMUdata.append(imu_queue.get())		# Append data to IMU data
-					
+
 			# Recieve Front Pi (Pi 1) data after recording
 			print("Begin Receive")						# Print Recieve begin
 			while True:							# Infinite loop
 				msg = bus.recv()					# Recieve CAN data
 				timestamp, value = util_func.parse_can_data(msg.data)	# Put can data through parsing function - see util_funcv2
-				
+
 				# Front Potentiometer 1
 				if msg.arbitration_id == 0xA1:			# IF CAN ID is 0xA1 (Potentiometer 1)
 					FPot1data.append([timestamp, value])	# Append time and data to Front Potentiometer 1 data
@@ -226,7 +226,7 @@ while True:	# Infinite loop for data acquisition
 					print("Broked")			# You should never see this print
 					print(msg.arbitration_id)	# If you do it's all jacked up
 					print(msg.data[0])		# Call/text me - 7206439097
-					
+
 			FPotdata = [[t1, d1, d2] for (t1, d1), (t2, d2) in zip(FPot1data, FPot2data) if t1 == t2]	# Combine Front Potentiometers into one list
 			FHalldata = [[t1, d1, d2] for (t1, d1), (t2, d2) in zip(FHall1data, FHall2data) if t1 == t2]	# Combine Front Halls into one list
 			print("data finished")	# We done
