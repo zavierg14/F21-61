@@ -169,6 +169,9 @@ try:											 #We use this try loop in case you are troubleshooting in the ter
             if (current_time - slip_time) >= slip_interval:
                 msg = bus.recv(timeout=0)
                 if (msg and msg.arbitration_id == 0x2B0):
+                    raw_bytes = (msg.data[1] << 8) | msg.data[0]
+                    slipData.append([round(current_time - start_time, 6), raw_bytes])
+                slip_time = current_time
 
         send_can_message(0xE1, [0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
         time.sleep(1)
