@@ -62,6 +62,8 @@ lgpio.gpio_claim_alert(h, PIN2, lgpio.RISING_EDGE)	# Set up alert for rising edg
 
 pulse_count1 = 0					# Pulse counter 1 for hall effect
 pulse_count2 = 0					# Pulse counter 2 for hall effect
+hall_time = last_print
+hall_interval = 1/20
 
 def pulse_callback(chip, gpio, level, timestamp):
 	'''
@@ -72,10 +74,8 @@ def pulse_callback(chip, gpio, level, timestamp):
 	if level == 1:										# IF the signal is HIGH
 		if gpio == PIN1:								# IF pin is 1
 			pulse_count1 +=1							# Increment counter 1
-			Halldata.append([time.perf_counter(), pulse_count1, pulse_count2])	# Append to data list
 		elif gpio == PIN2:								# IF pin is 2
 			pulse_count2 += 1							# Increment counter 2
-			Halldata.append([time.perf_counter(), pulse_count1, pulse_count2])	# Append to data list
 
 def stop_callback():
 	'''
@@ -186,6 +186,19 @@ while True:	# Infinite loop for data acquisition
 					raw_value2 = max(0, pot_channel2.value)			# Read ADC2 Values
 					Potdata.append([current, raw_value1, raw_value2])	# Append potentiometer data
 					last_print=current					# Set last print to now	
+				if current - hall_time >= hall_interval:
+					elapsed_time = current_time - hall_time
+					pulses1 = pulse_count1 
+					pulses2 = pulse_count2
+					rot1 = pulses1/16.0
+					rot2 = pulses2/16.0
+					frequency_hz1 = rot1 / elapsed_time
+					frequency_hz2 = rot2 / elapsed_time
+					Halldata.append([time.perf_counter(), frequency_hz1, frequency_hz2])
+					pulse_count1 = 0
+					pulse_count2 = 0
+					hall_time = current_time
+					
 				while not gps_queue.empty():			# IF GPS queue has data
 					GPSdata.append(gps_queue.get())		# Append data to GPS data
 				while not imu_queue.empty():			# IF IMU queue has data
@@ -238,7 +251,7 @@ while True:	# Infinite loop for data acquisition
 
 			# Write to file
 			util_func.csvWriteUSB(GPSdata, "GPS", ["Time", "Lat", "Long", "Alt", "Speed", "Sats"])			# GPS
-			util_func.csvWriteUSB(IMUdata, "IMU", ["Time", "AccX", "AccY", "AccZ", "AngleX", "AngleY", "AngleZ"])	# IMU
+			util_func.csvWriteUSB(IMUdata, "IMU", ["Time", "AccX", "AccY", "AccZ", "AngleX", "AngleY", "AngleZ", "GyroX", "GyroY", "GyroZ", "MagX" ,"MagY", "MagZ"])	# IMU
 			util_func.csvWriteUSB(Potdata, "RPot", ["Time", "RawValue1", "RawValue2"])				# Rear Pots
 			util_func.csvWriteUSB(Halldata, "Hall", ["Time", "PulseCounts1", "PulseCounts2"])			# Rear Halls
 			util_func.csvWriteUSB(FPotdata, "FPot", ["Time", "RawValue1", "RawValue2"])				# Front Pots
