@@ -187,18 +187,18 @@ while True:	# Infinite loop for data acquisition
 					Potdata.append([current, raw_value1, raw_value2])	# Append potentiometer data
 					last_print=current					# Set last print to now	
 				if current - hall_time >= hall_interval:
-					elapsed_time = current_time - hall_time
-					pulses1 = pulse_count1 
+					elapsed_time = current - hall_time
+					pulses1 = pulse_count1
 					pulses2 = pulse_count2
 					rot1 = pulses1/16.0
 					rot2 = pulses2/16.0
 					frequency_hz1 = rot1 / elapsed_time
 					frequency_hz2 = rot2 / elapsed_time
-					Halldata.append([time.perf_counter(), frequency_hz1, frequency_hz2])
+					Halldata.append([current, frequency_hz1, frequency_hz2])
 					pulse_count1 = 0
 					pulse_count2 = 0
-					hall_time = current_time
-					
+					hall_time = current
+
 				while not gps_queue.empty():			# IF GPS queue has data
 					GPSdata.append(gps_queue.get())		# Append data to GPS data
 				while not imu_queue.empty():			# IF IMU queue has data
