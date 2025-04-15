@@ -10,7 +10,7 @@ adc = ADS.ADS1015(i2c)
 
 def read_potentiometer():
     # Use AnalogIn to read the channel
-    pot_channel = AnalogIn(adc, ADS.P0)  # Use P0 for channel A0
+    pot_channel = AnalogIn(adc, ADS.P1)  # Use P0 for channel A0
     
     # Get raw value and voltage
     raw_value = pot_channel.value

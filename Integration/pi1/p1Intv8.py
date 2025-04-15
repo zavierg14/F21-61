@@ -20,6 +20,7 @@ CONFIG_REGISTER = 0x01								 #Set configuration register to write to ADC devic
 util_func.set_continuous_mode(adc, CONFIG_REGISTER)				 #Write to device and set mode
 adc.data_rate = 3300								 #Set data rate
 
+# P0 is left
 channel1 = AnalogIn(adc, ADS.P0)						 #Initialize analog channel1
 channel2 = AnalogIn(adc, ADS.P1)						 #Initialize analog channel2
 
@@ -53,9 +54,11 @@ last_pulse_count1 = 0								 #Global for saving last pulse count when hall data
 pulse_count2 = 0								 #Global for counting total pulsees on Hall2
 last_pulse_count2 = 0								 #Global for saving last pulse count when data is not being logged
 
+# Left callback
 def pulse_callback1(channel):							 #Funtion for GPIO event, increments pulse_count1
     global pulse_count1
     pulse_count1 += 1
+# Right callback
 def pulse_callback2(channel):							 #Function for GPIO event, increments pulse_count2
     global pulse_count2
     pulse_count2 += 1
@@ -101,8 +104,8 @@ try:											 #We use this try loop in case you are troubleshooting in the ter
 
         pot1Data = []									 # Reset buffers for each session, each list holds timestamp and data value
         pot2Data = []
-        hall1Data = []
-        hall2Data = []
+        hall1Data = []		# Left WHeel
+        hall2Data = []		# Right Wheel
         press_times = []								 #This guy just holds timestamps
 
         start_time = time.perf_counter()						 #Allows us to use time elapsed and not time the Pi was turned on
@@ -136,15 +139,20 @@ try:											 #We use this try loop in case you are troubleshooting in the ter
         print("starting to send")
         send_can_message(0xE1, [0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
         time.sleep(1)
+	# Front Left Suspension
         for data in pot1Data:
             send_can_data(0xA1, data[0], data[1])
-        for data in pot2Data:
+        # Front Right Suspension
+	for data in pot2Data:
             send_can_data(0xA2, data[0], data[1])
-        for data in hall1Data:
+        # Front Left Wheel
+	for data in hall1Data:
             send_can_data(0xC1, data[0], int(data[1]*100))
-        for data in hall2Data:
+        # Front Right Wheel
+	for data in hall2Data:
             send_can_data(0xC2, data[0], int(data[1]*100))
-        for data in press_times:
+       # Flags
+	for data in press_times:
             send_can_message(0xE2, int(data * 1e6).to_bytes(4, 'big'))
         send_can_message(0xE1, [0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
         print("Done Sending")
