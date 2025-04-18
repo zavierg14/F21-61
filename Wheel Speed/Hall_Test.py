@@ -1,6 +1,5 @@
 import RPi.GPIO as GPIO
 import time
-import lgpio
 
 # Global variable to hold pulse count
 pulse_count = 0
@@ -21,17 +20,17 @@ def main():
     # Set up GPIO17 as an input, with an internal pull-down resistor.
     # If your sensor is open-collector, you will need an external pull-up
     # resistor instead, and use pull_up_down=GPIO.PUD_OFF.
-    GPIO.setup(17, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+    GPIO.setup(27, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
     # Detect rising edges on GPIO17
     # bouncetime=20 helps debounce signals that might be noisy
-    GPIO.add_event_detect(17, GPIO.RISING, callback=pulse_callback, bouncetime=20)
+    GPIO.add_event_detect(27, GPIO.RISING, callback=pulse_callback, bouncetime=2)
 
     print("Starting pulse counting. Press CTRL+C to stop.")
     try:
         # Keep the script running to catch interrupts
         while True:
-            time.sleep(1)
+            pass
     except KeyboardInterrupt:
         print("\nExiting program.")
     finally:

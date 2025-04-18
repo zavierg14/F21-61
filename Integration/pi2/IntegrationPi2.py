@@ -192,6 +192,7 @@ while True:	# Infinite loop for data acquisition
 			lcd.write_string("System Initialized")
 			lcd.cursor_pos = (1,0)
 			lcd.write_string("Ready to Begin")
+			print("start")
 			printed = True
 
 		msg = bus.recv()	# CAN recieve
@@ -200,6 +201,7 @@ while True:	# Infinite loop for data acquisition
 			lcd.clear()				# Print logging data
 			lcd.cursor_pos = (0,0)
 			lcd.write_string("System Logging")
+			print("Logging")
 			# Start GPS & IMU processing
 			gps_queue = multiprocessing.Queue()										# Start GPS queue
 			imu_queue = multiprocessing.Queue()										# Start IMU queue
