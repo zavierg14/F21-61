@@ -24,7 +24,7 @@ def main():
     while True:
         raw_value, voltage = read_potentiometer()
         print(f"Raw Value: {raw_value}, Voltage: {voltage:.2f} V")
-        #time.sleep(1)
+        time.sleep(.25)
 
 if __name__ == "__main__":
     main()
