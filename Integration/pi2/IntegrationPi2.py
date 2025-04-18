@@ -116,7 +116,7 @@ def imu_gps_process(gps_queue, imu_queue, lcd):
 
 	last_update = time.perf_counter()	# Start time for GPS
 	lcd_update = last_update
-	
+
 	# Loop through data collection
 	while True:	# Infinite loop!
 		current_time = time.perf_counter()		# Variable for time now
