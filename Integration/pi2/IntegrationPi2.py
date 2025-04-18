@@ -152,9 +152,13 @@ def imu_gps_process(gps_queue, imu_queue, lcd):
 			gps_queue.put(gps_data)		# GPS queue to get out of process
 			imu_queue.put(imu_data)		# IMU queue to get out of process
 
-	#	if current_time - lcd_update >= 1:
-			#
-			#imu_queue.put(imu_data)
+		if current_time - lcd_update >= 1:
+			lcd.cursor_pos = (2,0)
+			lcd.write_string("Speed (km/hr):")
+			lcd.cursor_pos=(3,0)
+			lcd.write_string(str(gps_data[4]))
+			lcd_update = current_time
+
 printed = False
 # -----------------------------------------
 # MAIN
@@ -300,7 +304,7 @@ while True:	# Infinite loop for data acquisition
 			util_func.csvWriteUSB(FHalldata, "FHall", ["Time", "Data1", "Data2"])					# Front Halls
 			util_func.csvWriteUSB(Rotarydata, "Rotary", ["Time", "Data"])						# Rotary Encoder (5th wheel)
 			util_func.csvWriteUSB(flags, "Flags", ["Time"])								# Flags
-			gc.collect												# Take out the trash
+			gc.collect()												# Take out the trash
 			printed = False
 
 	except KeyboardInterrupt:
