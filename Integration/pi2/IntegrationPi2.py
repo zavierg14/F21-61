@@ -63,22 +63,43 @@ lgpio.gpio_claim_alert(h, PIN1, lgpio.RISING_EDGE)	# Set up alert for rising edg
 lgpio.gpio_claim_input(h, PIN2)				# Configure PIN2 as input
 lgpio.gpio_claim_alert(h, PIN2, lgpio.RISING_EDGE)	# Set up alert for rising edge detection
 
+last_time1 = None
+last_time2 = None
+hall1Data = []
+hall2Data = []
+start_time1 = None
+
 pulse_count1 = 0					# Pulse counter 1 for hall effect
 pulse_count2 = 0					# Pulse counter 2 for hall effect
 hall_time = last_print
 hall_interval = 1/20
 
-def pulse_callback(chip, gpio, level, timestamp):
+def pulse_callback1(chip, gpio, level, timestamp):
 	'''
 	callback function that gets called on the rising edge of the hall sensor output.
 	increments pulse counter
 	'''
-	global pulse_count1, pulse_count2, Halldata						# Import external variables
-	if level == 1:										# IF the signal is HIGH
-		if gpio == PIN1:								# IF pin is 1
-			pulse_count1 +=1							# Increment counter 1
-		elif gpio == PIN2:								# IF pin is 2
-			pulse_count2 += 1							# Increment counter 2
+	global last_time1, RHall1data, start_time1
+#	print("pulse")
+
+	now = time.perf_counter()
+	if last_time1 is not None:
+		dt = now -last_time1
+		freq = 1.0 / (dt * 16.0)
+		RHall1data.append([now, freq])
+#		print(freq)
+	last_time1 = now
+
+def pulse_callback2(chip, gpio, level, timestamp):
+	global last_time2, RHall2data, start_time
+#	print("other pulse")
+	now2 = time.perf_counter()
+	if last_time2 is not None:
+		dt2 = now2 - last_time2
+		freq2 = 1.0 / (dt2 * 16.0)
+		RHall2data.append([now2, freq2])
+#		print(freq2)
+	last_time2 = now2
 
 def stop_callback():
 	'''
@@ -186,14 +207,15 @@ while True:	# Infinite loop for data acquisition
 			gps_imu_proc.start()												# Start process
 
 			# Start hall Effects
-			hall1 = lgpio.callback(h, PIN1, lgpio.RISING_EDGE, pulse_callback)	# Turn on hall 1 collection
-			hall2 = lgpio.callback(h, PIN2, lgpio.RISING_EDGE, pulse_callback)	# Turn on hall 2 collection
+			hall1 = lgpio.callback(h, PIN1, lgpio.RISING_EDGE, pulse_callback1)	# Turn on hall 1 collection
+			hall2 = lgpio.callback(h, PIN2, lgpio.RISING_EDGE, pulse_callback2)	# Turn on hall 2 collection
 
 			# Data Storage
 			GPSdata = []		# GPS
 			IMUdata = []		# IMU
 			RPotdata = []		# Rear Potentiometers
-			RHalldata = []		# Rear Hall Effects
+			RHall1data = []		# Rear Hall Effects
+			RHall2data = []
 			FPot1data = []		# Front Potentiometer 1
 			FPot2data = []		# Front Potentiometer 2
 			MagEncodedata = []	# Magnetic Encoder
@@ -217,18 +239,18 @@ while True:	# Infinite loop for data acquisition
 					raw_value2 = max(0, pot_channel2.value)			# Read ADC2 Values
 					RPotdata.append([current, raw_value1, raw_value2])	# Append potentiometer data
 					last_print=current					# Set last print to now	
-				if current - hall_time >= hall_interval:
-					elapsed_time = current - hall_time
-					pulses1 = pulse_count1
-					pulses2 = pulse_count2
-					rot1 = pulses1/16.0
-					rot2 = pulses2/16.0
-					frequency_hz1 = rot1 / elapsed_time
-					frequency_hz2 = rot2 / elapsed_time
-					RHalldata.append([current, frequency_hz1, frequency_hz2])
-					pulse_count1 = 0
-					pulse_count2 = 0
-					hall_time = current
+#				if current - hall_time >= hall_interval:
+#					elapsed_time = current - hall_time
+#					pulses1 = pulse_count1
+#					pulses2 = pulse_count2
+#					rot1 = pulses1/16.0
+#					rot2 = pulses2/16.0
+#					frequency_hz1 = rot1 / elapsed_time
+#					frequency_hz2 = rot2 / elapsed_time
+#					RHalldata.append([current, frequency_hz1, frequency_hz2])
+#					pulse_count1 = 0
+#					pulse_count2 = 0
+#					hall_time = current
 
 				while not gps_queue.empty():			# IF GPS queue has data
 					GPSdata.append(gps_queue.get())		# Append data to GPS data
@@ -257,9 +279,11 @@ while True:	# Infinite loop for data acquisition
 				# Front Hall Effect Left
 				elif msg.arbitration_id == 0xC1 or msg.arbitration_id == 193:		# IF CAN ID is 0xC1 (Hall 1 )
 					FHall1data.append([timestamp, value/100.0])	# Append time and data to Hall Effect 1 data
+#					print("Hall1", value)
 				# Front Hall Effect Right
 				elif msg.arbitration_id == 0xC2 or msg.arbitration_id == 194:		# IF CAN ID is 0xC2 (Hall 2)
 					FHall2data.append([timestamp, value/100.0])	# Append time and data to Hall Effect 2 data
+#					print(value)
 				# Rotary Encoder
 				elif msg.arbitration_id == 0xD1 or msg.arbitration_id == 209:		# IF CAN ID is 0xD1 (Rotary Encoder)
 					if value == 0x7FFF or value == 32767:
@@ -284,7 +308,7 @@ while True:	# Infinite loop for data acquisition
 					print(type(msg.arbitration_id))
 
 			FPotdata = [[t1, d1, d2] for (t1, d1), (t2, d2) in zip(FPot1data, FPot2data) if t1 == t2]	# Combine Front Potentiometers into one list
-			FHalldata = [[t1, d1, d2] for (t1, d1), (t2, d2) in zip(FHall1data, FHall2data) if t1 == t2]	# Combine Front Halls into one list
+			#FHalldata = [[t1, d1, d2] for (t1, d1), (t2, d2) in zip(FHall1data, FHall2data) if t1 == t2]	# Combine Front Halls into one list
 			lcd.clear()
 			lcd.cursor_pos = (0,0)
 			lcd.write_string("Data Finished")	# We done
@@ -298,10 +322,12 @@ while True:	# Infinite loop for data acquisition
 			util_func.csvWriteUSB(GPSdata, "GPS", ["Time", "Lat", "Long", "Alt", "Speed", "Sats"])			# GPS
 			util_func.csvWriteUSB(IMUdata, "IMU", ["Time", "AccX", "AccY", "AccZ", "AngleX", "AngleY", "AngleZ", "GyroX", "GyroY", "GyroZ", "MagX" ,"MagY", "MagZ"])	# IMU
 			util_func.csvWriteUSB(RPotdata, "RPot", ["Time", "RawValue1", "RawValue2"])				# Rear Pots
-			util_func.csvWriteUSB(RHalldata, "RHall", ["Time", "PulseCounts1", "PulseCounts2"])			# Rear Halls
+			util_func.csvWriteUSB(RHall1data, "RHall1", ["Time", "Frequency"])			# Rear Halls
+			util_func.csvWriteUSB(RHall2data, "RHall2", ["Time", "Frequency"])
 			util_func.csvWriteUSB(FPotdata, "FPot", ["Time", "RawValue1", "RawValue2"])				# Front Pots
 			util_func.csvWriteUSB(MagEncodedata, "MagEncode", ["Time", "Data"])					# Magnetic Encoder (Steering)
-			util_func.csvWriteUSB(FHalldata, "FHall", ["Time", "Data1", "Data2"])					# Front Halls
+			util_func.csvWriteUSB(FHall1data, "FHall1", ["Time", "Data"])					# Front Halls
+			util_func.csvWriteUSB(FHall2data, "FHall2", ["Time", "Data"])
 			util_func.csvWriteUSB(Rotarydata, "Rotary", ["Time", "Data"])						# Rotary Encoder (5th wheel)
 			util_func.csvWriteUSB(flags, "Flags", ["Time"])								# Flags
 			gc.collect()												# Take out the trash
