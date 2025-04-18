@@ -141,17 +141,20 @@ def imu_gps_process(gps_queue, imu_queue, lcd):
 				device.getDeviceData("magX"),
 				device.getDeviceData("magY"),
 				device.getDeviceData("magZ")]
-		if current_time - lcd_update >= 1:
-			lcd.cursor_pos = (2,0)
-			lcd.write_string("Speed (km/hr):")
-			lcd.cursor_pos=(3,0)
-			lcd.write_string(str(gps_data[4]))
-			lcd_update = current_time
+			#if current_time - lcd_update >= 1:
+			#lcd.cursor_pos = (2,0)
+			#lcd.write_string("Speed (km/hr):")
+			#lcd.cursor_pos=(3,0)
+			#lcd.write_string(str(gps_data[4]))
+			#lcd_update = current_time
 
 			# Put data into queues
 			gps_queue.put(gps_data)		# GPS queue to get out of process
 			imu_queue.put(imu_data)		# IMU queue to get out of process
 
+	#	if current_time - lcd_update >= 1:
+			#
+			#imu_queue.put(imu_data)
 printed = False
 # -----------------------------------------
 # MAIN
@@ -185,8 +188,8 @@ while True:	# Infinite loop for data acquisition
 			# Data Storage
 			GPSdata = []		# GPS
 			IMUdata = []		# IMU
-			Potdata = []		# Rear Potentiometers
-			Halldata = []		# Rear Hall Effects
+			RPotdata = []		# Rear Potentiometers
+			RHalldata = []		# Rear Hall Effects
 			FPot1data = []		# Front Potentiometer 1
 			FPot2data = []		# Front Potentiometer 2
 			MagEncodedata = []	# Magnetic Encoder
@@ -199,14 +202,16 @@ while True:	# Infinite loop for data acquisition
 
 			# Meat of recording and printing data
 			while True:					# While loop to continually check sensors
-				msg = bus.recv(timeout=0)		# Check CAN
+				msg = bus.recv()		# Check CAN
+				if msg != None and msg.arbitration_id != 0x2B0:
+					print(msg)
 				if msg != None and msg.arbitration_id == 0xE1 and msg.data[0] == 2:	# IF CAN ID is 0xE1 (power switch) and command is 2 (OFF)
 					break								# Break loop, end data recording
 				current = time.perf_counter()					# Check current time
 				if current - last_print >= (1/600.0):				# Sample at 600Hz
 					raw_value1 = max(0, pot_channel1.value)			# Read ADC1 Values
 					raw_value2 = max(0, pot_channel2.value)			# Read ADC2 Values
-					Potdata.append([current, raw_value1, raw_value2])	# Append potentiometer data
+					RPotdata.append([current, raw_value1, raw_value2])	# Append potentiometer data
 					last_print=current					# Set last print to now	
 				if current - hall_time >= hall_interval:
 					elapsed_time = current - hall_time
@@ -216,7 +221,7 @@ while True:	# Infinite loop for data acquisition
 					rot2 = pulses2/16.0
 					frequency_hz1 = rot1 / elapsed_time
 					frequency_hz2 = rot2 / elapsed_time
-					Halldata.append([current, frequency_hz1, frequency_hz2])
+					RHalldata.append([current, frequency_hz1, frequency_hz2])
 					pulse_count1 = 0
 					pulse_count2 = 0
 					hall_time = current
@@ -225,7 +230,7 @@ while True:	# Infinite loop for data acquisition
 					GPSdata.append(gps_queue.get())		# Append data to GPS data
 				while not imu_queue.empty():			# IF IMU queue has data
 					IMUdata.append(imu_queue.get())		# Append data to IMU data
-
+			print("loop broken")
 			gps_imu_proc.terminate()
 			gps_imu_proc.join(timeout=1)
 			# Recieve Front Pi (Pi 1) data after recording
@@ -288,8 +293,8 @@ while True:	# Infinite loop for data acquisition
 			# Write to file
 			util_func.csvWriteUSB(GPSdata, "GPS", ["Time", "Lat", "Long", "Alt", "Speed", "Sats"])			# GPS
 			util_func.csvWriteUSB(IMUdata, "IMU", ["Time", "AccX", "AccY", "AccZ", "AngleX", "AngleY", "AngleZ", "GyroX", "GyroY", "GyroZ", "MagX" ,"MagY", "MagZ"])	# IMU
-			util_func.csvWriteUSB(Potdata, "RPot", ["Time", "RawValue1", "RawValue2"])				# Rear Pots
-			util_func.csvWriteUSB(Halldata, "RHall", ["Time", "PulseCounts1", "PulseCounts2"])			# Rear Halls
+			util_func.csvWriteUSB(RPotdata, "RPot", ["Time", "RawValue1", "RawValue2"])				# Rear Pots
+			util_func.csvWriteUSB(RHalldata, "RHall", ["Time", "PulseCounts1", "PulseCounts2"])			# Rear Halls
 			util_func.csvWriteUSB(FPotdata, "FPot", ["Time", "RawValue1", "RawValue2"])				# Front Pots
 			util_func.csvWriteUSB(MagEncodedata, "MagEncode", ["Time", "Data"])					# Magnetic Encoder (Steering)
 			util_func.csvWriteUSB(FHalldata, "FHall", ["Time", "Data1", "Data2"])					# Front Halls
