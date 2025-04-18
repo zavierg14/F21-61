@@ -115,8 +115,7 @@ def imu_gps_process(gps_queue, imu_queue, lcd):
 	device.openDevice()                                 						# Open serial port
 
 	last_update = time.perf_counter()	# Start time for GPS
-	lcd_update = last_update
-	
+
 	# Loop through data collection
 	while True:	# Infinite loop!
 		current_time = time.perf_counter()		# Variable for time now
@@ -135,19 +134,14 @@ def imu_gps_process(gps_queue, imu_queue, lcd):
 				device.getDeviceData("angleX"),
 				device.getDeviceData("angleY"),
 				device.getDeviceData("angleZ"),
-				device.getDeviceData("gyroX"),
+				device.getDeviceData("gyroX"), 
 				device.getDeviceData("gyroY"),
 				device.getDeviceData("gyroZ"),
 				device.getDeviceData("magX"),
 				device.getDeviceData("magY"),
 				device.getDeviceData("magZ")]
-		if current_time - lcd_update >= 1:
-			lcd.cursor_pos = (2,0)
-			lcd.write_string("Speed (km/hr):")
-			lcd.cursor_pos=(3,0)
+			lcd.cursor_pos = (3,0)
 			lcd.write_string(str(gps_data[4]))
-			lcd_update = current_time
-
 			# Put data into queues
 			gps_queue.put(gps_data)		# GPS queue to get out of process
 			imu_queue.put(imu_data)		# IMU queue to get out of process
@@ -158,17 +152,13 @@ def imu_gps_process(gps_queue, imu_queue, lcd):
 # -----------------------------------------
 while True:	# Infinite loop for data acquisition
 	try:	# Try to ensure an error doesn't break everything
-		lcd.clear()
 		lcd.cursor_pos = (0,0)
 		lcd.write_string("System Initialized")
 		lcd.cursor_pos = (1,0)
 		lcd.write_string("Ready to Begin")
-
 		msg = bus.recv()	# CAN recieve
-		#print(msg)
 		if msg.arbitration_id == 0xE1 and msg.data[0] == 1:	# IF CAN ID is 0xE1 (power switch) and command is 1 (ON)
 			lcd.clear()				# Print logging data
-			lcd.cursor_pos = (0,0)
 			lcd.write_string("System Logging")
 			# Start GPS & IMU processing
 			gps_queue = multiprocessing.Queue()										# Start GPS queue
@@ -193,7 +183,7 @@ while True:	# Infinite loop for data acquisition
 			Rotarydata = []		# Rotary Encoder
 			flags = []		# Flags
 
-			#lcd.cursor_pos = (0,3)
+			lcd.cursor_pos = (0,3)
 
 			# Meat of recording and printing data
 			while True:					# While loop to continually check sensors
@@ -224,29 +214,26 @@ while True:	# Infinite loop for data acquisition
 				while not imu_queue.empty():			# IF IMU queue has data
 					IMUdata.append(imu_queue.get())		# Append data to IMU data
 
-			gps_imu_proc.terminate()
-			gps_imu_proc.join(timeout=1)
 			# Recieve Front Pi (Pi 1) data after recording
-			lcd.clear()
 			lcd.cursor_pot = (0,0)
 			lcd.write_string("Begin Receive")						# Print Recieve begin
 			while True:							# Infinite loop
 				msg = bus.recv()					# Recieve CAN data
 				timestamp, value = util_func.parse_can_data(msg.data)	# Put can data through parsing function - see util_funcv2
 
-				# Front Potentiometer Left
+				# Front Potentiometer 1
 				if msg.arbitration_id == 0xA1:			# IF CAN ID is 0xA1 (Potentiometer 1)
 					FPot1data.append([timestamp, value])	# Append time and data to Front Potentiometer 1 data
-				# Front Potentiometer Right
+				# Front Potentiometer 2
 				elif msg.arbitration_id == 0xA2:		# IF CAN ID is 0xA2 (Potentiometer 2)
 					FPot2data.append([timestamp, value])	# Append time and data to Front Potentiometer 2 data
 				# Magnetic Encoder
 				elif msg.arbitration_id == 0xB1:		# IF CAN ID is 0xB1 (Magnetic Encoder)
 					MagEncodedata.append([timestamp, value])# Append time and data to Magnetic Encoder data
-				# Front Hall Effect Left
+				# Front Hall Effect 1
 				elif msg.arbitration_id == 0xC1:		# IF CAN ID is 0xC1 (Hall 1 )
 					FHall1data.append([timestamp, value])	# Append time and data to Hall Effect 1 data
-				# Front Hall Effect Right
+				# Front Hall Effect 2
 				elif msg.arbitration_id == 0xC2:		# IF CAN ID is 0xC2 (Hall 2)
 					FHall2data.append([timestamp, value])	# Append time and data to Hall Effect 2 data
 				# Rotary Encoder
@@ -256,37 +243,35 @@ while True:	# Infinite loop for data acquisition
 				elif msg.arbitration_id == 0xE2:		# IF CAN ID is 0xE2 (Flags)
 					flags.append([timestamp])		# Append time to flags data
 				# Switch
-				elif (msg.arbitration_id == 0xE1 or msg.arbitration_id == 225) and msg.data[0] == 3:	# IF CAN ID is 0xE1 (Switch)
+				elif msg.arbitration_id == 0xE1 and msg.data[0] == 3:	# IF CAN ID is 0xE1 (Switch)
 					print("break")					# Print break
 					break						# Break loop
 				else:					# Catch all if something breaks
 					print("Broked")			# You should never see this print
 					print(msg.arbitration_id)	# If you do it's all jacked up
 					print(msg.data[0])		# Call/text me - 7206439097
-					print(type(msg.arbitration_id))
 
 			FPotdata = [[t1, d1, d2] for (t1, d1), (t2, d2) in zip(FPot1data, FPot2data) if t1 == t2]	# Combine Front Potentiometers into one list
 			FHalldata = [[t1, d1, d2] for (t1, d1), (t2, d2) in zip(FHall1data, FHall2data) if t1 == t2]	# Combine Front Halls into one list
-			lcd.clear()
-			lcd.cursor_pos = (0,0)
-			lcd.write_string("Data Finished")	# We done
-			time.sleep(1.5)
+			lcd.write_string("data finished")	# We done
+
 			# Close Devices
-			#gps_imu_proc.terminate()		# Kill seperate process
-			#gps_imu_proc.join(timeout=1)		# Wait for it to join
+			gps_imu_proc.terminate()		# Kill seperate process
+			gps_imu_proc.join(timeout=1)		# Wait for it to join
 			util_func.stop_callbacks(hall1, hall2)	# Stop hall effects
 
 			# Write to file
 			util_func.csvWriteUSB(GPSdata, "GPS", ["Time", "Lat", "Long", "Alt", "Speed", "Sats"])			# GPS
 			util_func.csvWriteUSB(IMUdata, "IMU", ["Time", "AccX", "AccY", "AccZ", "AngleX", "AngleY", "AngleZ", "GyroX", "GyroY", "GyroZ", "MagX" ,"MagY", "MagZ"])	# IMU
 			util_func.csvWriteUSB(Potdata, "RPot", ["Time", "RawValue1", "RawValue2"])				# Rear Pots
-			util_func.csvWriteUSB(Halldata, "RHall", ["Time", "PulseCounts1", "PulseCounts2"])			# Rear Halls
+			util_func.csvWriteUSB(Halldata, "Hall", ["Time", "PulseCounts1", "PulseCounts2"])			# Rear Halls
 			util_func.csvWriteUSB(FPotdata, "FPot", ["Time", "RawValue1", "RawValue2"])				# Front Pots
 			util_func.csvWriteUSB(MagEncodedata, "MagEncode", ["Time", "Data"])					# Magnetic Encoder (Steering)
 			util_func.csvWriteUSB(FHalldata, "FHall", ["Time", "Data1", "Data2"])					# Front Halls
 			util_func.csvWriteUSB(Rotarydata, "Rotary", ["Time", "Data"])						# Rotary Encoder (5th wheel)
 			util_func.csvWriteUSB(flags, "Flags", ["Time"])								# Flags
 			gc.collect												# Take out the trash
+
 
 	except KeyboardInterrupt:
 		break
