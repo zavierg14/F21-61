@@ -5,7 +5,7 @@
 # -----------------------------------------
 # Required Packages
 # -----------------------------------------
-import serial# Serial communication for GPS and IMU
+import serial # Serial communication for GPS and IMU
 import time												# Time tracking for sampling intervals
 import adafruit_gps											# GPS module interface
 import dependencies.chs.lib.device_model as deviceModel							# Actual local file w the deviceModel class
@@ -32,7 +32,7 @@ ADSinterval = 1/3300 #s 						ADS interval
 last_print = time.perf_counter()					# Start time for sampling
 can_update = last_print							# Start time for CAN
 gc.disable()								# Disable python memory collect
-bus = can.Bus(channel='can0', interface='socketcan', bitrate=1000000)	# Turn on CAN
+bus = can.Bus(channel='can0', interface='socketcan', bitrate=500000)	# Turn on CAN
 lcd = CharLCD(i2c_expander='PCF8574', address=0x27, port=1, cols=20, rows=4)
 lcd.clear()
 
@@ -152,21 +152,23 @@ def imu_gps_process(gps_queue, imu_queue, lcd):
 			gps_queue.put(gps_data)		# GPS queue to get out of process
 			imu_queue.put(imu_data)		# IMU queue to get out of process
 
-
+printed = False
 # -----------------------------------------
 # MAIN
 # -----------------------------------------
 while True:	# Infinite loop for data acquisition
 	try:	# Try to ensure an error doesn't break everything
-		lcd.clear()
-		lcd.cursor_pos = (0,0)
-		lcd.write_string("System Initialized")
-		lcd.cursor_pos = (1,0)
-		lcd.write_string("Ready to Begin")
+		if printed != True:
+			lcd.clear()
+			lcd.cursor_pos = (0,0)
+			lcd.write_string("System Initialized")
+			lcd.cursor_pos = (1,0)
+			lcd.write_string("Ready to Begin")
+			printed = True
 
 		msg = bus.recv()	# CAN recieve
 		#print(msg)
-		if msg.arbitration_id == 0xE1 and msg.data[0] == 1:	# IF CAN ID is 0xE1 (power switch) and command is 1 (ON)
+		if (msg.arbitration_id == 0xE1 or msg.arbitration_id == 225) and msg.data[0] == 1:	# IF CAN ID is 0xE1 (power switch) and command is 1 (ON)
 			lcd.clear()				# Print logging data
 			lcd.cursor_pos = (0,0)
 			lcd.write_string("System Logging")
@@ -235,30 +237,37 @@ while True:	# Infinite loop for data acquisition
 				timestamp, value = util_func.parse_can_data(msg.data)	# Put can data through parsing function - see util_funcv2
 
 				# Front Potentiometer Left
-				if msg.arbitration_id == 0xA1:			# IF CAN ID is 0xA1 (Potentiometer 1)
+				if msg.arbitration_id == 0xA1 or msg.arbitration_id == 161:			# IF CAN ID is 0xA1 (Potentiometer 1)
 					FPot1data.append([timestamp, value])	# Append time and data to Front Potentiometer 1 data
 				# Front Potentiometer Right
-				elif msg.arbitration_id == 0xA2:		# IF CAN ID is 0xA2 (Potentiometer 2)
+				elif msg.arbitration_id == 0xA2 or msg.arbitration_id == 162:		# IF CAN ID is 0xA2 (Potentiometer 2)
 					FPot2data.append([timestamp, value])	# Append time and data to Front Potentiometer 2 data
 				# Magnetic Encoder
-				elif msg.arbitration_id == 0xB1:		# IF CAN ID is 0xB1 (Magnetic Encoder)
-					MagEncodedata.append([timestamp, value])# Append time and data to Magnetic Encoder data
+				elif msg.arbitration_id == 0xB1 or msg.arbitration_id == 177:		# IF CAN ID is 0xB1 (Magnetic Encoder)
+					MagEncodedata.append([timestamp, value/100.0])# Append time and data to Magnetic Encoder data
 				# Front Hall Effect Left
-				elif msg.arbitration_id == 0xC1:		# IF CAN ID is 0xC1 (Hall 1 )
-					FHall1data.append([timestamp, value])	# Append time and data to Hall Effect 1 data
+				elif msg.arbitration_id == 0xC1 or msg.arbitration_id == 193:		# IF CAN ID is 0xC1 (Hall 1 )
+					FHall1data.append([timestamp, value/100.0])	# Append time and data to Hall Effect 1 data
 				# Front Hall Effect Right
-				elif msg.arbitration_id == 0xC2:		# IF CAN ID is 0xC2 (Hall 2)
-					FHall2data.append([timestamp, value])	# Append time and data to Hall Effect 2 data
+				elif msg.arbitration_id == 0xC2 or msg.arbitration_id == 194:		# IF CAN ID is 0xC2 (Hall 2)
+					FHall2data.append([timestamp, value/100.0])	# Append time and data to Hall Effect 2 data
 				# Rotary Encoder
-				elif msg.arbitration_id == 0xD1:		# IF CAN ID is 0xD1 (Rotary Encoder)
+				elif msg.arbitration_id == 0xD1 or msg.arbitration_id == 209:		# IF CAN ID is 0xD1 (Rotary Encoder)
+					if value == 0x7FFF or value == 32767:
+						value = 0
+					if value & 0x8000:
+						value -=65536
+						value = value * .1
 					Rotarydata.append([timestamp, value])	# Append time and data to Rotary Encoder data
 				# Flags
-				elif msg.arbitration_id == 0xE2:		# IF CAN ID is 0xE2 (Flags)
+				elif msg.arbitration_id == 0xE2 or msg.arbitration_id == 226:		# IF CAN ID is 0xE2 (Flags)
 					flags.append([timestamp])		# Append time to flags data
 				# Switch
 				elif (msg.arbitration_id == 0xE1 or msg.arbitration_id == 225) and msg.data[0] == 3:	# IF CAN ID is 0xE1 (Switch)
 					print("break")					# Print break
 					break						# Break loop
+				elif (msg.arbitration_id == 0x2B0):
+					pass
 				else:					# Catch all if something breaks
 					print("Broked")			# You should never see this print
 					print(msg.arbitration_id)	# If you do it's all jacked up
@@ -287,6 +296,7 @@ while True:	# Infinite loop for data acquisition
 			util_func.csvWriteUSB(Rotarydata, "Rotary", ["Time", "Data"])						# Rotary Encoder (5th wheel)
 			util_func.csvWriteUSB(flags, "Flags", ["Time"])								# Flags
 			gc.collect												# Take out the trash
+			printed = False
 
 	except KeyboardInterrupt:
 		break
