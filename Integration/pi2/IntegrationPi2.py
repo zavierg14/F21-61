@@ -206,7 +206,7 @@ while True:	# Infinite loop for data acquisition
 
 			# Meat of recording and printing data
 			while True:					# While loop to continually check sensors
-				msg = bus.recv()		# Check CAN
+				msg = bus.recv(timeout=0)		# Check CAN
 				#if msg != None and msg.arbitration_id != 0x2B0:
 				#	print(msg)
 				if msg != None and msg.arbitration_id == 0xE1 and msg.data[0] == 2:	# IF CAN ID is 0xE1 (power switch) and command is 2 (OFF)
