@@ -84,7 +84,7 @@ def pulse_callback1(chip, gpio, level, timestamp):
 	if last_time1 is not None:
 		dt = now -last_time1
 		freq = 1.0 / (dt * 16.0)
-		ts = round(dt, 6)
+		ts = round(now, 6)
 		RHall1data.append([ts, round(freq, 4)])
 	last_time1 = now
 
