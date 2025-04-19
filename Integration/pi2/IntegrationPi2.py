@@ -80,25 +80,21 @@ def pulse_callback1(chip, gpio, level, timestamp):
 	increments pulse counter
 	'''
 	global last_time1, RHall1data, start_time1
-#	print("pulse")
-
 	now = time.perf_counter()
 	if last_time1 is not None:
 		dt = now -last_time1
 		freq = 1.0 / (dt * 16.0)
-		RHall1data.append([now, freq])
-#		print(freq)
+		ts = round(dt, 6)
+		RHall1data.append([ts, round(freq, 4)])
 	last_time1 = now
 
 def pulse_callback2(chip, gpio, level, timestamp):
 	global last_time2, RHall2data, start_time
-#	print("other pulse")
 	now2 = time.perf_counter()
 	if last_time2 is not None:
 		dt2 = now2 - last_time2
 		freq2 = 1.0 / (dt2 * 16.0)
-		RHall2data.append([now2, freq2])
-#		print(freq2)
+		RHall2data.append([round(now2, 6),round(freq2, 4)])
 	last_time2 = now2
 
 def stop_callback():
@@ -225,7 +221,8 @@ while True:	# Infinite loop for data acquisition
 			FHall2data = []		# Front Hall 2
 			Rotarydata = []		# Rotary Encoder
 			flags = []		# Flags
-
+			last_time1 = last_print
+			last_time2 = last_print
 			#lcd.cursor_pos = (0,3)
 
 			# Meat of recording and printing data
