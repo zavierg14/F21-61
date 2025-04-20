@@ -133,7 +133,7 @@ def imu_gps_process(gps_queue, imu_queue, lcd):
 
 	last_update = time.perf_counter()	# Start time for GPS
 	lcd_update = last_update
-
+	printed = False
 	# Loop through data collection
 	while True:	# Infinite loop!
 		current_time = time.perf_counter()		# Variable for time now
@@ -158,17 +158,12 @@ def imu_gps_process(gps_queue, imu_queue, lcd):
 				device.getDeviceData("magX"),
 				device.getDeviceData("magY"),
 				device.getDeviceData("magZ")]
-			#if current_time - lcd_update >= 1:
-			#lcd.cursor_pos = (2,0)
-			#lcd.write_string("Speed (km/hr):")
-			#lcd.cursor_pos=(3,0)
-			#lcd.write_string(str(gps_data[4]))
-			#lcd_update = current_time
-
-			# Put data into queues
-			gps_queue.put(gps_data)		# GPS queue to get out of process
-			imu_queue.put(imu_data)		# IMU queue to get out of process
-
+			gps_queue.put(gps_data)
+			imu_queue.put(imu_data)
+		if printed == False:
+			lcd.cursor_pos = (2,0)
+			lcd.write_string("Dynamics Logging")
+			printed = True
 #		if current_time - lcd_update >= 1:
 #			lcd.cursor_pos = (2,0)
 #			lcd.write_string("Speed (km/hr):")
@@ -176,28 +171,48 @@ def imu_gps_process(gps_queue, imu_queue, lcd):
 #			lcd.write_string(str(gps_data[4]))
 #			lcd_update = current_time
 
-printed = False
+			# Put data into queues
+#			gps_queue.put(gps_data)		# GPS queue to get out of process
+#			imu_queue.put(imu_data)		# IMU queue to get out of process
+
+#		if current_time - lcd_update >= 1:
+#			lcd.cursor_pos = (2,0)
+#			lcd.write_string("Speed (Km/hr):")
+#			lcd.cursor_pos=(3,0)
+#			lcd.write_string(str(gps_data[4]))
+#			lcd_update = current_time
+print_time = last_print
 # -----------------------------------------
 # MAIN
 # -----------------------------------------
 while True:	# Infinite loop for data acquisition
 	try:	# Try to ensure an error doesn't break everything
-		if printed != True:
+#		lcd.clear()
+#		lcd.cursor_pos = (0,0)
+#		lcd.write_string("System Initialized")
+#		lcd.cursor_pos = (1,0)
+#		lcd.write_string("Ready to Begin")
+		if time.perf_counter() - print_time > 10.0:
+			print("10")
 			lcd.clear()
 			lcd.cursor_pos = (0,0)
 			lcd.write_string("System Initialized")
 			lcd.cursor_pos = (1,0)
 			lcd.write_string("Ready to Begin")
+			lcd.cursor_pos = (2,0)
+			path1 = util_func.get_usb_path()
+			lcd.write_string(str(path1))
 			print("start")
-			printed = True
+			print_time = time.perf_counter()
 
 		msg = bus.recv()	# CAN recieve
-		#print(msg)
+#		print(msg)
 		if (msg.arbitration_id == 0xE1 or msg.arbitration_id == 225) and msg.data[0] == 1:	# IF CAN ID is 0xE1 (power switch) and command is 1 (ON)
 			lcd.clear()				# Print logging data
 			lcd.cursor_pos = (0,0)
 			lcd.write_string("System Logging")
 			print("Logging")
+
 			# Start GPS & IMU processing
 			gps_queue = multiprocessing.Queue()										# Start GPS queue
 			imu_queue = multiprocessing.Queue()										# Start IMU queue
@@ -311,11 +326,14 @@ while True:	# Infinite loop for data acquisition
 			lcd.clear()
 			lcd.cursor_pos = (0,0)
 			lcd.write_string("Data Finished")	# We done
-			time.sleep(1.5)
 			# Close Devices
 			#gps_imu_proc.terminate()		# Kill seperate process
 			#gps_imu_proc.join(timeout=1)		# Wait for it to join
 			util_func.stop_callbacks(hall1, hall2)	# Stop hall effects
+			path = util_func.get_usb_path()
+			lcd.cursor_pos = (1,0)
+			lcd.write_string(str(path))
+			time.sleep(1.5)
 
 			# Write to file
 			util_func.csvWriteUSB(GPSdata, "GPS", ["Time", "Lat", "Long", "Alt", "Speed", "Sats"])			# GPS
@@ -330,7 +348,6 @@ while True:	# Infinite loop for data acquisition
 			util_func.csvWriteUSB(Rotarydata, "Rotary", ["Time", "Data"])						# Rotary Encoder (5th wheel)
 			util_func.csvWriteUSB(flags, "Flags", ["Time"])								# Flags
 			gc.collect()												# Take out the trash
-			printed = False
 
 	except KeyboardInterrupt:
 		break
